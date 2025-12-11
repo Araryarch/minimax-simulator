@@ -766,8 +766,6 @@
 *::-webkit-scrollbar-corner {
   background: transparent;
 }
-<<<<<<< HEAD
-
 /* Value Update Animations */
 @keyframes value-pop {
   0% { transform: scale(1); }
@@ -850,5 +848,3 @@
 .driver-popover.driverjs-theme .driver-popover-close-btn:hover {
   color: hsl(var(--foreground));
 }
-=======
->>>>>>> parent of c6c6433 (fix: fix)
