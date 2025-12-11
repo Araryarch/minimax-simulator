@@ -1,6 +1,6 @@
 import React from 'react';
 import { LayoutNode } from '@/lib/utils/layout';
-import { PlusCircle, Pencil, Trash2, CheckCircle2 } from 'lucide-react';
+import { PlusCircle, Pencil, Trash2 } from 'lucide-react';
 import { useAnimatedNumber } from '@/components/AnimatedNumber';
 import { MathRenderer } from '@/components/MathRenderer';
 
@@ -55,29 +55,31 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({
   const { displayValue: animatedBeta } = useAnimatedNumber(beta, 200, !isLearnMode);
   const { displayValue: animatedValue } = useAnimatedNumber(value, 200, true);
 
-  // Styling logic for Shapes
-  const shapeClass = node.isMaxNode 
-     ? "rounded-[6px] border-2" // MAX = Box (Square-ish)
-     : "rounded-full border-2"; // MIN = Circle
+  // Styles
+  const containerStyle = {
+    left: node.x,
+    top: node.y,
+    width: node.width,
+    height: node.height,
+    position: 'absolute' as const,
+  };
 
-  // Pick color based on state
-  const borderClass = isActive 
-     ? "border-primary shadow-[0_0_15px_rgba(var(--primary),0.5)]" 
+  // Determine Shape Appearance based on State
+  // Colors mapped to theme variables
+  const strokeClass = isActive 
+     ? "stroke-primary stroke-[3px]" 
      : isVisited 
-        ? "border-primary/80 shadow-sm" 
-        : "border-muted-foreground/40";
+        ? "stroke-primary stroke-[2px]" 
+        : "stroke-muted-foreground/40 stroke-[2px]";
+    
+  const fillClass = isActive 
+     ? "fill-primary/10"
+     : isPruned
+        ? "fill-muted/50"
+        : "fill-background";
 
-  const bgClass = isActive 
-     ? "bg-primary/5" 
-     : "bg-background";
-  
-  const baseClass = "tree-node flex items-center justify-center shadow-sm hover:shadow-md transition-all duration-300";
-  const prunedClass = isPruned ? "opacity-50 grayscale" : "";
-  const pickingClass = isPickingSource ? "ring-4 ring-yellow-400 ring-offset-2 animate-pulse" : "";
-  const learnModeClass = isLearnMode ? "cursor-pointer hover:border-primary" : "";
-
-  // Helper styles
-  const containerClassName = `${baseClass} ${shapeClass} ${borderClass} ${bgClass} ${prunedClass} ${pickingClass} ${learnModeClass}`;
+  const pickingClass = isPickingSource ? "animate-pulse drop-shadow-[0_0_8px_rgba(250,204,21,0.6)]" : "";
+  const hoverClass = isLearnMode ? "cursor-pointer" : "cursor-default";
 
   const handleAddClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -94,7 +96,6 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({
     props.onDeleteNode(node.id);
   };
 
-  // Helper to safely format infinity
   const formatVal = (v: number | undefined | null) => {
       if (v === Infinity) return '∞';
       if (v === -Infinity) return '-∞';
@@ -102,16 +103,13 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({
       return Math.round(v * 100) / 100;
   };
 
+  // Shape Dimensions
+  const r = node.width / 2; // Radius for circle
+  
   return (
     <div
-      className={containerClassName}
-      style={{
-        left: node.x,
-        top: node.y,
-        width: node.width,
-        height: node.height,
-        position: 'absolute',
-      }}
+      className={`tree-node select-none group focus:outline-none ${hoverClass}`}
+      style={containerStyle}
       onClick={() => onNodeClick(node.id)}
       onContextMenu={(e) => {
           e.preventDefault();
@@ -119,35 +117,58 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({
       }}
       id={`node-${node.id}`}
     >
+        {/* Visual Layer: SVG Background Shapes */}
+        <svg className="absolute inset-0 w-full h-full overflow-visible pointer-events-none transition-all duration-300">
+            <g className={`${pickingClass} transition-all duration-300`}>
+                {node.isMaxNode ? (
+                    // MAX Node: Rectangle/Square
+                    <rect 
+                        x="0" 
+                        y="0" 
+                        width={node.width} 
+                        height={node.height} 
+                        rx="6" 
+                        className={`transition-colors duration-300 ${strokeClass} ${fillClass}`}
+                    />
+                ) : (
+                    // MIN Node: Circle
+                    <circle 
+                        cx={r} 
+                        cy={r} 
+                        r={r} 
+                        className={`transition-colors duration-300 ${strokeClass} ${fillClass}`}
+                    />
+                )}
+            </g>
+        </svg>
+
       {/* Explanation Popup */}
       {explanation && !isLearnMode && (
           <div className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 w-max max-w-[350px] p-2.5 bg-popover/95 backdrop-blur text-popover-foreground rounded-xl shadow-xl border border-border z-50 animate-in fade-in slide-in-from-bottom-2 duration-200 pointer-events-none">
               <div className="max-h-[250px] overflow-y-auto custom-scrollbar">
                 <MathRenderer content={explanation} compact={true} />
               </div>
-              {/* Arrow */}
               <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-[6px] border-transparent border-t-popover/95" />
           </div>
       )}
 
-      <div className="node-content flex flex-col items-center justify-center w-full h-full relative group">
-        <span className="node-id absolute top-0.5 right-1.5 text-[8px] opacity-40 font-mono">{node.id.slice(0, 4)}</span>
+      {/* Content Layer */}
+      <div className="relative flex flex-col items-center justify-center w-full h-full z-10">
+        <span className="node-id absolute top-0.5 right-1.5 text-[8px] opacity-40 font-mono hidden group-hover:block">{node.id.slice(0, 4)}</span>
         
         {/* Pruning Indicator */}
         {isPruned && (
-            <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded z-10">
-                <span className="text-2xl">❌</span>
-            </div>
+             <span className="absolute text-2xl opacity-80 pointer-events-none">❌</span>
         )}
 
-        {/* Node Type Indicator */}
-        <span className="text-[9px] font-bold uppercase tracking-wider mb-0.5 opacity-70">
+        {/* Node Type Label */}
+         {/* Optional: Restore label if needed, but shapes usually convey type */}
+        {/* <span className="text-[7px] font-bold uppercase tracking-wider mb-0.5 opacity-60">
             {node.isMaxNode ? 'MAX' : 'MIN'}
-        </span>
+        </span> */}
 
         {/* Main Value */}
-        <div className="text-lg font-bold leading-none my-1">
-             {/* Picking Indicator */}
+        <div className="text-lg font-bold leading-none my-0.5 text-foreground">
              {isPickingSource && animatedValue === undefined ? (
                  <span className="text-yellow-500 animate-bounce">?</span>
              ) : (
@@ -157,7 +178,7 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({
 
         {/* Controls Overlay (Only Simulate Mode & Hover) */}
         {!isLearnMode && !isPruned && (
-        <div className="node-controls absolute -bottom-8 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-20 bg-background/80 rounded-full px-2 py-1 shadow-sm border border-border pointer-events-none group-hover:pointer-events-auto">
+        <div className="absolute -bottom-8 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-20 bg-background/90 backdrop-blur rounded-full px-2 py-1 shadow-sm border border-border">
              <button onClick={handleAddClick} className="p-1 hover:text-green-500 transition-colors" title="Add Child">
                 <PlusCircle size={14} />
              </button>
@@ -177,15 +198,14 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({
              </div>
         )}
 
-        {/* Alpha Beta Values */}
-        {/* If Learn Mode: Input Fields */}
+        {/* Alpha Beta Values / Inputs */}
         {isLearnMode && !isPruned ? (
-             <div className="w-[90%] flex gap-1 mt-1 z-20" onClick={e => e.stopPropagation()}>
+             <div className="w-[120%] flex gap-0.5 justify-center mt-0.5 z-20" onClick={e => e.stopPropagation()}>
                  <input 
                     value={learnAlpha || ''} 
                     onChange={e => onLearnAlphaBetaChange?.(node.id, 'alpha', e.target.value)}
                     placeholder="α"
-                    className="w-1/2 h-5 text-[10px] text-center bg-background border border-border rounded focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                    className="w-8 h-4 text-[9px] text-center bg-background/80 border border-border rounded-sm focus:border-primary focus:ring-0 outline-none p-0"
                     title="Alpha"
                     disabled={isPruned}
                  />
@@ -193,7 +213,7 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({
                     value={learnBeta || ''} 
                     onChange={e => onLearnAlphaBetaChange?.(node.id, 'beta', e.target.value)}
                     placeholder="β"
-                    className="w-1/2 h-5 text-[10px] text-center bg-background border border-border rounded focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                    className="w-8 h-4 text-[9px] text-center bg-background/80 border border-border rounded-sm focus:border-primary focus:ring-0 outline-none p-0"
                     title="Beta"
                     disabled={isPruned}
                  />
@@ -201,9 +221,10 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({
         ) : (
              // Simulate Mode: Display Values
              (alpha !== undefined || beta !== undefined) && !isPruned && (
-                <div className="flex gap-2 text-[9px] font-mono mt-0.5 opacity-80">
-                    <span title="Alpha" className="text-blue-600 dark:text-blue-400">α:{formatVal(animatedAlpha)}</span>
-                    <span title="Beta" className="text-red-600 dark:text-red-400">β:{formatVal(animatedBeta)}</span>
+                <div className="flex gap-1 text-[8px] font-mono mt-0.5 bg-background/50 rounded px-1 backdrop-blur-sm">
+                    <span title="Alpha" className="text-blue-600 dark:text-blue-400 font-medium">α:{formatVal(animatedAlpha)}</span>
+                    <span className="opacity-30">|</span>
+                    <span title="Beta" className="text-red-600 dark:text-red-400 font-medium">β:{formatVal(animatedBeta)}</span>
                 </div>
             )
         )}
