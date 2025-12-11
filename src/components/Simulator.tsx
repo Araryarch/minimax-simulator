@@ -11,6 +11,7 @@ import { alphaBeta } from '@/lib/algorithms/alphaBeta';
 import { toast } from "sonner";
 import { Menu, X } from 'lucide-react';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
+import { sfx } from '@/lib/utils/sfx';
 import '@/components/TreeComponents.css';
 
 export default function Simulator() {
@@ -169,6 +170,7 @@ export default function Simulator() {
       const newRoot = generateTree(depth, branching); 
       setRoot(newRoot);
       setCurrentStepIndex(-1);
+      sfx.playDing();
   };
 
   // Generate empty tree structure (no values, user fills them)
@@ -193,6 +195,7 @@ export default function Simulator() {
       const emptyRoot = generateEmptyStructure(depth, branching, true);
       setRoot(emptyRoot);
       setCurrentStepIndex(-1);
+      sfx.playDing();
       toast.success(`Struktur pohon (${depth} level, ${branching} cabang) dibuat. Edit nilai daun dengan mengklik ✏️.`);
   };
 
@@ -249,15 +252,23 @@ export default function Simulator() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [steps.length, isPlaying, currentStepIndex]);
 
-  // Auto-scroll log to current step
+  // Auto-scroll log to current step and play sound
   useEffect(() => {
     if (currentStepIndex >= 0) {
       const logItem = logItemRefs.current.get(currentStepIndex);
       if (logItem) {
         logItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
+      
+      // Play pop sound for each step
+      sfx.playPop();
+      
+      // Play success sound when simulation completes
+      if (currentStepIndex === steps.length - 1) {
+        setTimeout(() => sfx.playSuccess(), 300);
+      }
     }
-  }, [currentStepIndex]);
+  }, [currentStepIndex, steps.length]);
 
   // Show toast for pruning events
   useEffect(() => {
@@ -266,6 +277,9 @@ export default function Simulator() {
       if (step.type === StepType.PRUNE) {
         // Count how many nodes would be visited without pruning
         const remainingSteps = steps.slice(currentStepIndex + 1);
+        
+        // Play scissors sound!
+        sfx.playPrune();
         
         toast(
           <div className="flex flex-col gap-2">

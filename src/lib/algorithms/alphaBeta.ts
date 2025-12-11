@@ -127,18 +127,22 @@ export function* alphaBeta(
 
     if (alpha >= beta) {
       const prunedCount = childrenToVisit.length - childIndex;
-      const pruneExplanation = getPruneExplanation(isMax, alpha, beta, prunedCount, childValue);
       
-      yield {
-        id: `prune-${node.id}`,
-        type: StepType.PRUNE,
-        nodeId: node.id,
-        description: pruneExplanation,
-        alpha,
-        beta,
-        visitedIds: [...currentPath],
-        activePath: currentPath,
-      };
+      // Only emit prune step if there are actually branches to skip
+      if (prunedCount > 0) {
+        const pruneExplanation = getPruneExplanation(isMax, alpha, beta, prunedCount, childValue);
+        
+        yield {
+          id: `prune-${node.id}`,
+          type: StepType.PRUNE,
+          nodeId: node.id,
+          description: pruneExplanation,
+          alpha,
+          beta,
+          visitedIds: [...currentPath],
+          activePath: currentPath,
+        };
+      }
       break; 
     }
   }
