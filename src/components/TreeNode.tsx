@@ -2,7 +2,7 @@ import React from 'react';
 import { LayoutNode } from '@/lib/utils/layout';
 import { PlusCircle, Pencil, Trash2 } from 'lucide-react';
 import { useAnimatedNumber } from '@/components/AnimatedNumber';
-import { MathRenderer } from '@/components/MathRenderer';
+
 
 interface TreeNodeProps {
   node: LayoutNode;
@@ -146,7 +146,9 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({
       {explanation && !isLearnMode && (
           <div className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 w-max max-w-[350px] p-2.5 bg-popover/95 backdrop-blur text-popover-foreground rounded-xl shadow-xl border border-border z-50 animate-in fade-in slide-in-from-bottom-2 duration-200 pointer-events-none">
               <div className="max-h-[250px] overflow-y-auto custom-scrollbar">
-                <MathRenderer content={explanation} compact={true} />
+                <div className="text-xs font-mono text-foreground whitespace-pre-wrap">
+                    {explanation}
+                </div>
               </div>
               <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-[6px] border-transparent border-t-popover/95" />
           </div>
