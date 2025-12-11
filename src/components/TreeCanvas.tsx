@@ -131,6 +131,57 @@ export const TreeCanvas: React.FC<TreeCanvasProps> = ({
       setZoom(z => Math.max(0.1, Math.min(3, z * scale)));
   };
 
+  // Minimap calculations
+  const minimapSize = { width: 150, height: 100 };
+  const treeBounds = useMemo(() => {
+    if (nodePositions.length === 0) return { minX: 0, maxX: 500, minY: 0, maxY: 400 };
+    const xs = nodePositions.map(n => n.x);
+    const ys = nodePositions.map(n => n.y);
+    return {
+      minX: Math.min(...xs) - 50,
+      maxX: Math.max(...xs) + 50,
+      minY: Math.min(...ys) - 50,
+      maxY: Math.max(...ys) + 100
+    };
+  }, [nodePositions]);
+
+  const treeSize = {
+    width: treeBounds.maxX - treeBounds.minX,
+    height: treeBounds.maxY - treeBounds.minY
+  };
+
+  const minimapScale = Math.min(
+    minimapSize.width / treeSize.width,
+    minimapSize.height / treeSize.height
+  ) * 0.9;
+
+  // Viewport rectangle on minimap (approximate)
+  const viewportOnMinimap = {
+    x: (-pan.x / zoom - treeBounds.minX) * minimapScale,
+    y: (-pan.y / zoom - treeBounds.minY) * minimapScale,
+    width: (window.innerWidth || 800) / zoom * minimapScale,
+    height: (window.innerHeight || 600) / zoom * minimapScale
+  };
+
+  const handleMinimapClick = (e: React.MouseEvent<SVGSVGElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
+    
+    // Convert minimap click to tree coordinates
+    const treeX = clickX / minimapScale + treeBounds.minX;
+    const treeY = clickY / minimapScale + treeBounds.minY;
+    
+    // Center viewport on clicked position
+    const viewportWidth = (window.innerWidth || 800);
+    const viewportHeight = (window.innerHeight || 600);
+    
+    setPan({
+      x: -(treeX * zoom - viewportWidth / 2),
+      y: -(treeY * zoom - viewportHeight / 2)
+    });
+  };
+
   return (
     <div 
         className="relative w-full h-full overflow-hidden bg-dot-pattern"
@@ -196,7 +247,7 @@ export const TreeCanvas: React.FC<TreeCanvasProps> = ({
           <div className="bg-card p-1 rounded-lg border shadow-lg grid grid-cols-3 gap-0.5">
               <div></div>
               <button 
-                onClick={() => setPan(p => ({...p, y: p.y + 80}))} 
+                onClick={() => setPan(p => ({...p, y: p.y - 80}))} 
                 className="p-2 hover:bg-muted rounded active:bg-muted/80"
               >
                 <ChevronUp size={18}/>
@@ -204,7 +255,7 @@ export const TreeCanvas: React.FC<TreeCanvasProps> = ({
               <div></div>
               
               <button 
-                onClick={() => setPan(p => ({...p, x: p.x + 80}))} 
+                onClick={() => setPan(p => ({...p, x: p.x - 80}))} 
                 className="p-2 hover:bg-muted rounded active:bg-muted/80"
               >
                 <ChevronLeft size={18}/>
@@ -217,7 +268,7 @@ export const TreeCanvas: React.FC<TreeCanvasProps> = ({
                 <Move size={16}/>
               </button>
               <button 
-                onClick={() => setPan(p => ({...p, x: p.x - 80}))} 
+                onClick={() => setPan(p => ({...p, x: p.x + 80}))} 
                 className="p-2 hover:bg-muted rounded active:bg-muted/80"
               >
                 <ChevronRight size={18}/>
@@ -225,7 +276,7 @@ export const TreeCanvas: React.FC<TreeCanvasProps> = ({
               
               <div></div>
               <button 
-                onClick={() => setPan(p => ({...p, y: p.y - 80}))} 
+                onClick={() => setPan(p => ({...p, y: p.y + 80}))} 
                 className="p-2 hover:bg-muted rounded active:bg-muted/80"
               >
                 <ChevronDown size={18}/>
@@ -238,6 +289,61 @@ export const TreeCanvas: React.FC<TreeCanvasProps> = ({
               <button onClick={() => setZoom(z => Math.min(3, z + 0.2))} className="p-2 hover:bg-muted rounded active:bg-muted/80"><ZoomIn size={18}/></button>
               <button onClick={() => setZoom(z => Math.max(0.2, z - 0.2))} className="p-2 hover:bg-muted rounded active:bg-muted/80"><ZoomOut size={18}/></button>
           </div>
+      </div>
+
+      {/* Minimap */}
+      <div className="absolute top-4 right-4 bg-card/90 backdrop-blur border border-border rounded-lg shadow-lg overflow-hidden">
+        <div className="px-2 py-1 text-[10px] font-medium text-muted-foreground border-b border-border bg-muted/50">
+          Minimap
+        </div>
+        <svg 
+          width={minimapSize.width} 
+          height={minimapSize.height}
+          className="cursor-pointer"
+          onClick={handleMinimapClick}
+          style={{ background: 'hsl(var(--background))' }}
+        >
+          {/* Tree nodes on minimap */}
+          <g transform={`translate(${-treeBounds.minX * minimapScale}, ${-treeBounds.minY * minimapScale})`}>
+            {/* Edges */}
+            {edges.map(edge => (
+              <line
+                key={edge.id}
+                x1={edge.source.x * minimapScale}
+                y1={edge.source.y * minimapScale}
+                x2={edge.target.x * minimapScale}
+                y2={edge.target.y * minimapScale}
+                stroke="hsl(var(--muted-foreground))"
+                strokeWidth={0.5}
+                opacity={0.5}
+              />
+            ))}
+            {/* Nodes */}
+            {nodePositions.map(node => (
+              <circle
+                key={node.id}
+                cx={node.x * minimapScale}
+                cy={node.y * minimapScale}
+                r={3}
+                fill={node.isMaxNode ? '#ef4444' : '#3b82f6'}
+                opacity={simulationState?.visitedIds?.includes(node.id) ? 1 : 0.5}
+              />
+            ))}
+          </g>
+          
+          {/* Viewport indicator */}
+          <rect
+            x={Math.max(0, viewportOnMinimap.x)}
+            y={Math.max(0, viewportOnMinimap.y)}
+            width={Math.min(viewportOnMinimap.width, minimapSize.width)}
+            height={Math.min(viewportOnMinimap.height, minimapSize.height)}
+            fill="hsl(var(--primary))"
+            fillOpacity={0.15}
+            stroke="hsl(var(--primary))"
+            strokeWidth={1.5}
+            rx={2}
+          />
+        </svg>
       </div>
     </div>
   );

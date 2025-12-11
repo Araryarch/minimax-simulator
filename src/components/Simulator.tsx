@@ -43,56 +43,100 @@ export default function Simulator() {
         
         // Dynamic import to avoid SSR issues with driver.js
         import('driver.js').then(({ driver }) => {
+            const isMobile = window.innerWidth < 768;
+            
             const driverObj = driver({
                 showProgress: true,
                 animate: true,
-                steps: [
+                allowClose: true,
+                overlayColor: 'rgba(0, 0, 0, 0.75)',
+                steps: isMobile ? [
+                    // Mobile Tour - Simpler
                     { 
-                        element: '.main-canvas', 
                         popover: { 
-                            title: 'Visualisasi Pohon Permainan', 
-                            description: 'Ini adalah area utama di mana Anda bisa membangun dan melihat simulasi pohon permainan. Anda bisa menggeser (klik & drag) dan memperbesar/memperkecil (scroll) tampilan ini sesuka hati.' 
-                        } 
-                    },
-                    { 
-                        element: '.main-canvas svg g', 
-                        popover: { 
-                            title: 'Node & Struktur', 
-                            description: 'Pohon terdiri dari Node MAX (Kotak Merah) dan Node MIN (Lingkaran Biru). Algoritma akan mencari nilai terbaik dari bawah ke atas.' 
-                        } 
-                    },
-                    { 
-                        element: '.node-actions', 
-                        popover: { 
-                            title: 'Edit Pohon Secara Interaktif', 
-                            description: 'Arahkan kursor ke node mana saja! <br/>• Klik <b>(+)</b> untuk menambah anak cabang.<br/>• Klik <b>(Pensil)</b> untuk mengubah nilai (hanya di daun).<br/>• Klik <b>(Sampah)</b> untuk menghapus cabang.<br/>Gunakan tombol <b>Auto Layout</b> di pojok kanan bawah jika posisi berantakan.' 
-                        } 
-                    },
-                    { 
-                        element: '.algorithm-selector', 
-                        popover: { 
-                            title: 'Pilih Algoritma', 
-                            description: 'Pilih algoritma yang ingin disimulasikan: <b>Minimax</b> (eksplorasi penuh) atau <b>Alpha-Beta Pruning</b> (lebih efisien dengan pemangkasan cabang yang tidak perlu).' 
+                            title: 'Selamat Datang!', 
+                            description: 'Simulator Minimax - visualisasi algoritma pencarian dalam teori permainan.' 
                         } 
                     },
                     { 
                         element: '.simulation-controls', 
                         popover: { 
                             title: 'Kontrol Simulasi', 
-                            description: 'Jalankan simulasi secara otomatis dengan <b>Play</b>, atau bedah langkah demi langkah dengan tombol <b>Next/Prev</b>. Anda juga bisa mengatur kecepatan animasi!' 
+                            description: 'Pilih algoritma, atur kecepatan, dan kontrol jalannya simulasi di sini.',
+                            side: 'bottom'
                         } 
                     },
                     { 
                         element: '.simulation-log', 
                         popover: { 
-                            title: 'Log & Penjelasan Langkah', 
-                            description: 'Setiap langkah algoritma dicatat di sini secara detail. Klik pada baris log mana saja untuk melompat kembali ke momen tersebut dan melihat keadaan pohon saat itu.' 
+                            title: 'Log Langkah', 
+                            description: 'Lihat penjelasan setiap langkah. Tap untuk lompat ke langkah tertentu.',
+                            side: 'bottom'
+                        } 
+                    },
+                    { 
+                        popover: { 
+                            title: 'Navigasi', 
+                            description: 'Gunakan tombol panah di pojok kanan bawah untuk menggeser pohon, dan +/- untuk zoom.' 
+                        } 
+                    },
+                ] : [
+                    // Desktop Tour - Full
+                    { 
+                        popover: { 
+                            title: 'Selamat Datang di Simulator Minimax!', 
+                            description: 'Alat interaktif untuk memahami algoritma Minimax dan Alpha-Beta Pruning. Mari mulai tur singkat!' 
+                        } 
+                    },
+                    { 
+                        element: '.algorithm-selector', 
+                        popover: { 
+                            title: 'Pilih Algoritma', 
+                            description: '<b>Minimax</b> - eksplorasi penuh semua kemungkinan.<br/><b>Alpha-Beta</b> - lebih efisien dengan pemangkasan.',
+                            side: 'right'
+                        } 
+                    },
+                    { 
+                        element: '.simulation-controls', 
+                        popover: { 
+                            title: 'Kontrol Simulasi', 
+                            description: 'Tekan <b>Play</b> untuk jalankan otomatis, atau <b>Next/Prev</b> untuk langkah manual. Atur kecepatan sesuai keinginan.',
+                            side: 'right'
+                        } 
+                    },
+                    { 
+                        element: '.simulation-log', 
+                        popover: { 
+                            title: 'Log Simulasi', 
+                            description: 'Setiap langkah dijelaskan di sini. <b>Klik langkah mana saja</b> untuk langsung menuju ke momen itu.',
+                            side: 'right'
+                        } 
+                    },
+                    { 
+                        element: '.main-canvas', 
+                        popover: { 
+                            title: 'Pohon Permainan', 
+                            description: '<b>Klik & drag</b> untuk geser, <b>scroll</b> untuk zoom.<br/>Node MAX = kotak merah, MIN = lingkaran biru.',
+                            side: 'left'
+                        } 
+                    },
+                    { 
+                        element: '.tree-node', 
+                        popover: { 
+                            title: 'Interaksi Node', 
+                            description: '<b>Hover ke node</b> untuk melihat tombol aksi:<br/>• (+) Tambah anak<br/>• (✏️) Edit nilai<br/>• (🗑️) Hapus',
+                            side: 'bottom'
+                        } 
+                    },
+                    { 
+                        popover: { 
+                            title: 'Siap Mulai!', 
+                            description: 'Tekan <b>Play</b> dan lihat algoritma bekerja. Selamat belajar!' 
                         } 
                     },
                 ]
             });
             
-            // Small delay to ensure render
             setTimeout(() => {
                 driverObj.drive();
             }, 1000);
@@ -368,7 +412,7 @@ export default function Simulator() {
       </aside>
       
       {/* Main Canvas */}
-      <main className="flex-1 relative bg-dot-pattern min-h-0">
+      <main className="main-canvas flex-1 relative bg-dot-pattern min-h-0">
          {root ? (
              <TreeCanvas 
                 root={root} 
