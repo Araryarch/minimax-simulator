@@ -13,6 +13,14 @@ import { Menu, X, PlayCircle, GraduationCap, HelpCircle, CheckCircle2, RotateCcw
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { sfx } from '@/lib/utils/sfx';
 import '@/components/TreeComponents.css';
+import { MathRenderer } from '@/components/MathRenderer';
+
+// Helper to strip markdown for list view
+const getStepTitle = (desc: string) => {
+    const lines = desc.split('\n');
+    const firstLine = lines.find(l => l.trim().length > 0) || "Langkah";
+    return firstLine.replace(/#/g, '').trim(); 
+};
 
 // Helper to run algorithm and get correct values/prunes
 const getCorrectSolution = (root: TreeNode, algo: 'minimax' | 'alphabeta') => {
@@ -444,36 +452,19 @@ export default function Simulator() {
     if (currentStepIndex >= 0 && steps[currentStepIndex]) {
       const step = steps[currentStepIndex];
       if (step.type === StepType.PRUNE) {
-        // Count how many nodes would be visited without pruning
-        const remainingSteps = steps.slice(currentStepIndex + 1);
-        
         // Play scissors sound!
         sfx.playPrune();
         
         toast(
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2 font-bold text-destructive">
-              <span className="text-lg">✂️</span>
-              <span>Pemangkasan Terjadi!</span>
-            </div>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              <strong>Tanpa pemangkasan:</strong> Algoritma akan tetap mengunjungi 
-              cabang-cabang yang tersisa meskipun hasilnya tidak akan mengubah keputusan akhir.
-            </p>
-            <p className="text-sm leading-relaxed">
-              <strong>Dengan pemangkasan:</strong> Kita <em>menghemat waktu</em> dengan 
-              melewati cabang yang tidak perlu dieksplorasi! 🚀
-            </p>
-            <div className="mt-1 p-2 bg-muted rounded text-xs">
-              💡 <strong>Intinya:</strong> Node parent sudah menemukan pilihan yang lebih baik, 
-              jadi cabang ini pasti tidak akan dipilih.
-            </div>
+          <div className="w-full text-foreground/90">
+             <MathRenderer content={step.description} className="text-sm [&>h3]:text-destructive [&>h3]:mb-2" />
           </div>,
           {
-            duration: 15000,
-            position: 'bottom-right',
+            duration: 10000,
+            className: "w-[450px] max-w-[90vw] bg-card border-border",
           }
         );
+
       }
     }
   }, [currentStepIndex, steps]);
@@ -717,9 +708,22 @@ export default function Simulator() {
                         />
                       </div>
                       
-                      <div className="mt-6 flex flex-col gap-2 simulation-log">
-                        <h3 className="text-sm font-semibold px-1">Log Simulasi</h3>
-                        <div className="bg-muted/50 rounded-lg p-2 h-64 border border-border overflow-y-auto">
+                      {/* Current Step Explanation Panel */}
+                      <div className="simulation-explanation mt-4 p-3 bg-muted/40 border border-border rounded-lg min-h-[120px] max-h-[250px] overflow-y-auto">
+                           <h3 className="text-xs font-bold uppercase text-muted-foreground mb-2 flex items-center gap-2">
+                               <HelpCircle size={12} />
+                               Penjelasan Langkah {currentStepIndex + 1}
+                           </h3>
+                           {currentStepIndex >= 0 && steps[currentStepIndex] ? (
+                               <MathRenderer content={steps[currentStepIndex].description} />
+                           ) : (
+                               <p className="text-xs text-muted-foreground italic">Menunggu simulasi dimulai...</p>
+                           )}
+                      </div>
+
+                      <div className="mt-4 flex flex-col gap-2 simulation-log flex-1 min-h-0">
+                        <h3 className="text-sm font-semibold px-1">Riwayat Langkah</h3>
+                        <div className="bg-muted/50 rounded-lg p-2 flex-1 border border-border overflow-y-auto min-h-[150px]">
                             {steps.length === 0 && <span className="text-muted-foreground p-2 block text-xs">Belum ada simulasi.</span>}
                             {steps.map((s, i) => (
                                 <div 
@@ -728,14 +732,14 @@ export default function Simulator() {
                                     if (el) logItemRefs.current.set(i, el);
                                     else logItemRefs.current.delete(i);
                                     }}
-                                    className={`p-2 rounded mb-1 cursor-pointer transition-colors text-xs font-mono border-l-2 ${i === currentStepIndex ? 'bg-primary/20 border-primary text-foreground shadow-sm' : 'border-transparent hover:bg-muted/80'}`}
+                                    className={`p-2 rounded mb-1 cursor-pointer transition-colors text-xs border-l-2 flex gap-2 ${i === currentStepIndex ? 'bg-primary/20 border-primary text-foreground shadow-sm' : 'border-transparent hover:bg-muted/80'}`}
                                     onClick={() => {
                                         setIsPlaying(false);
                                         setCurrentStepIndex(i);
                                     }}
                                 >
-                                    <span className="font-bold opacity-70 mr-2">{i+1}.</span>
-                                    <span>{s.description}</span>
+                                    <span className="font-bold opacity-70 font-mono w-6 text-right">{i+1}.</span>
+                                    <span className="font-medium truncate">{getStepTitle(s.description)}</span>
                                 </div>
                             ))}
                         </div>

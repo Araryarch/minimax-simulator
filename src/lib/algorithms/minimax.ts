@@ -1,14 +1,9 @@
 import { TreeNode, SimulationStep, StepType } from '@/types/tree';
 
-function getNodeLabel(node: TreeNode, depth: number): string {
-  const type = node.isMaxNode ? 'MAX' : 'MIN';
-  if (node.children.length === 0) {
-    return `Daun (nilai: ${node.value ?? '?'})`;
-  }
-  if (depth === 0) {
-    return `Root (${type})`;
-  }
-  return `Node ${type} level ${depth}`;
+function formatValue(val: number): string {
+  if (val === Infinity) return '\\infty';
+  if (val === -Infinity) return '-\\infty';
+  return val.toString();
 }
 
 export function* minimax(
@@ -20,13 +15,17 @@ export function* minimax(
   treeDepth: number = 0
 ): Generator<SimulationStep, number, void> {
   const currentPath = [...path, node.id];
-  const nodeLabel = getNodeLabel(node, treeDepth);
+  const nodeType = isMax ? 'MAX' : 'MIN';
 
   yield {
     id: `visit-${node.id}`,
     type: StepType.VISIT,
     nodeId: node.id,
-    description: `Mengunjungi ${nodeLabel}`,
+    description: `### Mengunjungi Node ${nodeType}
+Mencari nilai optimal untuk **${nodeType}**.
+
+*   Jika **MAX**: Cari nilai terbesar dari anak.
+*   Jika **MIN**: Cari nilai terkecil dari anak.`,
     visitedIds: [...currentPath],
     activePath: currentPath,
   };
@@ -37,7 +36,8 @@ export function* minimax(
       id: `eval-${node.id}`,
       type: StepType.EVALUATE,
       nodeId: node.id,
-      description: `Evaluasi daun: nilai = ${val}`,
+      description: `### 📊 Evaluasi Daun
+Nilai daun ditemukan: **${val}**`,
       currentValue: val,
       visitedIds: [...currentPath],
       activePath: currentPath,
@@ -55,36 +55,52 @@ export function* minimax(
     const childValue: number = yield* minimax(child, depth - 1, !isMax, currentPath, reverse, treeDepth + 1);
 
     const prevBest = bestValue;
+    let updated = false;
+
     if (isMax) {
-      bestValue = Math.max(bestValue, childValue);
+      if (childValue > bestValue) {
+        bestValue = childValue;
+        updated = true;
+      }
     } else {
-      bestValue = Math.min(bestValue, childValue);
+      if (childValue < bestValue) {
+        bestValue = childValue;
+        updated = true;
+      }
     }
 
-    const bestValStr = bestValue === Infinity ? '∞' : (bestValue === -Infinity ? '-∞' : bestValue);
-    const comparison = isMax ? 'max' : 'min';
-    const updated = prevBest !== bestValue;
-    
+    const valStr = formatValue(bestValue);
+    const childValStr = formatValue(childValue);
+    const mathOp = isMax ? '\\max' : '\\min';
+    const compareOp = isMax ? '>' : '<';
+
     yield {
       id: `update-${node.id}-${child.id}`,
       type: StepType.UPDATE_BOUNDS,
       nodeId: node.id,
-      description: updated 
-        ? `${isMax ? 'MAX' : 'MIN'}: Anak ke-${childIndex} = ${childValue}, perbarui nilai jadi ${bestValStr}`
-        : `${isMax ? 'MAX' : 'MIN'}: Anak ke-${childIndex} = ${childValue}, tetap ${bestValStr}`,
+      description: `### Update Nilai ${nodeType}
+Menerima nilai **${childValStr}** dari anak.
+
+| Kondisi | Perhitungan |
+|---|---|
+| Bandingkan | $${childValStr} ${compareOp} ${formatValue(prevBest)}$ ? **${updated ? 'Ya' : 'Tidak'}** |
+| Formula | $v = ${mathOp}(${formatValue(prevBest)}, ${childValStr})$ |
+| **Hasil** | **$v = ${valStr}$** |`,
       currentValue: bestValue,
       visitedIds: [...currentPath],
       activePath: currentPath,
     };
   }
 
-  const valStr = bestValue === Infinity ? '∞' : (bestValue === -Infinity ? '-∞' : bestValue);
+  const valStr = formatValue(bestValue);
 
   yield {
     id: `backtrack-${node.id}`,
     type: StepType.BACKTRACK,
     nodeId: node.id,
-    description: `Kembali ke parent dengan nilai ${valStr}`,
+    description: `### 🔙 Selesai
+Node **${nodeType}** telah mengevaluasi semua anaknya.
+Nilai akhir yang dikembalikan ke parent: **$${valStr}$**`,
     currentValue: bestValue,
     visitedIds: [...currentPath],
     activePath: currentPath.slice(0, -1),
