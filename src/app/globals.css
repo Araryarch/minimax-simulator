@@ -766,6 +766,7 @@
 *::-webkit-scrollbar-corner {
   background: transparent;
 }
+<<<<<<< HEAD
 
 /* Value Update Animations */
 @keyframes value-pop {
@@ -849,3 +850,5 @@
 .driver-popover.driverjs-theme .driver-popover-close-btn:hover {
   color: hsl(var(--foreground));
 }
+=======
+>>>>>>> parent of c6c6433 (fix: fix)

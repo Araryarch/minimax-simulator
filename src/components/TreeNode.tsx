@@ -142,11 +142,112 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({
             </g>
         </svg>
 
+<<<<<<< HEAD
       {/* Explanation Popup */}
       {explanation && !isLearnMode && (
           <div className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 w-max max-w-[350px] p-2.5 bg-popover/95 backdrop-blur text-popover-foreground rounded-xl shadow-xl border border-border z-50 animate-in fade-in slide-in-from-bottom-2 duration-200 pointer-events-none">
               <div className="max-h-[250px] overflow-y-auto custom-scrollbar">
                 <MathRenderer content={explanation} compact={true} />
+=======
+      {/* Main Shape */}
+      {node.isMaxNode ? (
+          <rect x={-24} y={-24} width={48} height={48} rx={8} className="node-shape" />
+      ) : (
+          <circle r={26} className="node-shape" />
+      )}
+
+      {/* Type Badge */}
+      <g transform="translate(0, -38)">
+          <rect 
+            x={-16} y={-10} width={32} height={20} rx={4} 
+            fill="hsl(var(--background))" 
+            stroke={node.isMaxNode ? "hsl(var(--destructive))" : "hsl(var(--primary))"} 
+            strokeWidth="1.5" 
+          />
+          <text 
+            y={4} fontSize="10" textAnchor="middle" 
+            fill={node.isMaxNode ? "hsl(var(--destructive))" : "hsl(var(--primary))"} 
+            fontWeight="bold"
+          >
+              {node.isMaxNode ? "MAX" : "MIN"}
+          </text>
+      </g>
+
+      {/* Pruned X */}
+      {isPruned && (
+        <text y={8} fontSize="40" fill="hsl(var(--destructive))" textAnchor="middle" dominantBaseline="middle" style={{ pointerEvents: 'none', opacity: 0.9 }}>
+            ✕
+        </text>
+      )}
+
+      {/* Value */}
+      {!isPruned && (
+        <text y={6} textAnchor="middle" className="node-value" fontSize="16">
+            {value !== undefined ? value : ((node.value !== null) ? node.value : '?')}
+        </text>
+      )}
+      
+      {/* Alpha Beta */}
+      {(alpha !== undefined || beta !== undefined) && !isPruned && (
+          <text y={42} textAnchor="middle" fontSize="11" fill="hsl(var(--muted-foreground))" fontWeight="500">
+              {alpha !== undefined ? `\u03B1:${alpha}` : ''} {beta !== undefined ? `\u03B2:${beta}` : ''}
+          </text>
+      )}
+
+
+
+      {/* Actions */}
+      <g className="node-actions opacity-0 hover:opacity-100 transition-opacity" transform="translate(35, -20)">
+         <foreignObject width="60" height="60" style={{ overflow: 'visible' }}>
+             <div className="flex flex-col gap-1">
+                 <button onClick={handleAddClick} className="p-1 bg-primary text-primary-foreground rounded-full hover:scale-110 transition-transform shadow-sm" title="Add Child">
+                    <PlusCircle size={16} />
+                 </button>
+                 {node.children.length === 0 && (
+                     <button onClick={handleEditClick} className="p-1 bg-accent text-accent-foreground rounded-full hover:scale-110 transition-transform shadow-sm" title="Edit Value">
+                        <Pencil size={16} />
+                     </button>
+                 )}
+                 {!props.isRoot && (
+                    <button onClick={handleDeleteClick} className="p-1 bg-destructive text-destructive-foreground rounded-full hover:scale-110 transition-transform shadow-sm" title="Delete Node">
+                        <Trash2 size={16} />
+                    </button>
+                 )}
+             </div>
+         </foreignObject>
+      </g>
+
+      {/* Explanation Tooltip (Moved to end for Z-index within node group) */}
+      {props.explanation && (() => {
+        const textLen = props.explanation.length;
+        const tooltipWidth = Math.min(Math.max(140, textLen * 4), 320);
+        const tooltipHeight = Math.max(45, Math.ceil(textLen / 40) * 18 + 20);
+        const halfWidth = tooltipWidth / 2;
+        
+        return (
+          <g transform={`translate(0, ${-50 - tooltipHeight})`} style={{ pointerEvents: 'none' }}>
+            <rect 
+              x={-halfWidth} 
+              y={0} 
+              width={tooltipWidth} 
+              height={tooltipHeight}
+              rx={8}
+              fill="hsl(var(--popover))" 
+              stroke="hsl(var(--primary))" 
+              strokeWidth="2"
+              filter="drop-shadow(0 4px 12px rgb(0 0 0 / 0.4))"
+            />
+            {/* Arrow pointing down */}
+            <path 
+              d={`M -8 ${tooltipHeight} L 0 ${tooltipHeight + 10} L 8 ${tooltipHeight} Z`}
+              fill="hsl(var(--popover))"
+              stroke="hsl(var(--primary))"
+              strokeWidth="2"
+            />
+            <foreignObject x={-halfWidth + 8} y={6} width={tooltipWidth - 16} height={tooltipHeight - 10}>
+              <div className="text-[11px] text-center leading-snug p-1 text-popover-foreground font-medium">
+                {props.explanation}
+>>>>>>> parent of c6c6433 (fix: fix)
               </div>
               <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-[6px] border-transparent border-t-popover/95" />
           </div>
