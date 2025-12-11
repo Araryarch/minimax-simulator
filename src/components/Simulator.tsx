@@ -281,20 +281,16 @@ export default function Simulator() {
   };
 
   return (
-    <div className="flex flex-col md:flex-row w-full h-screen bg-background text-foreground overflow-hidden">
+    <div className="flex w-full h-screen bg-background text-foreground overflow-hidden relative">
       
-      {/* Mobile Header */}
-      <div className="md:hidden flex items-center justify-between p-4 border-b border-border bg-card/80 backdrop-blur">
-        <div>
-          <h1 className="text-lg font-bold tracking-tight text-primary">Minimax Simulator</h1>
-        </div>
-        <button 
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="p-2 rounded-lg hover:bg-muted transition-colors"
-        >
-          {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
-      </div>
+      {/* Mobile Menu Button - floating */}
+      <button 
+        onClick={() => setSidebarOpen(true)}
+        className="fixed top-4 left-4 z-30 p-2.5 rounded-lg bg-card border border-border shadow-lg hover:bg-muted transition-colors md:hidden"
+        style={{ display: sidebarOpen ? 'none' : 'flex' }}
+      >
+        <Menu size={20} />
+      </button>
 
       {/* Overlay for mobile */}
       {sidebarOpen && (
@@ -307,14 +303,14 @@ export default function Simulator() {
       {/* Sidebar */}
       <aside className={`
         fixed md:relative inset-y-0 left-0 z-50
-        w-80 max-w-[85vw] md:max-w-none
-        flex-shrink-0 border-r border-border bg-card/95 md:bg-card/50 backdrop-blur 
+        w-80 max-w-[90vw] md:max-w-none
+        flex-shrink-0 border-r border-border bg-card backdrop-blur 
         flex flex-col transition-transform duration-300 ease-in-out
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
-          <div className="p-4 md:p-6 border-b border-border flex justify-between items-center">
+          <div className="p-4 border-b border-border flex justify-between items-center">
               <div>
-                  <h1 className="text-lg md:text-xl font-bold tracking-tight text-primary">Simulator Minimax</h1>
+                  <h1 className="text-lg font-bold tracking-tight text-primary">Simulator Minimax</h1>
                   <p className="text-xs text-muted-foreground mt-1">Interaktif & Visual</p>
               </div>
               <button 
@@ -325,7 +321,7 @@ export default function Simulator() {
               </button>
           </div>
           
-          <div className="p-3 md:p-4 flex-1 overflow-y-auto simulation-sidebar">
+          <div className="p-4 flex-1 overflow-y-auto simulation-sidebar">
               <div className="simulation-controls">
                 <Controls 
                    currentStep={currentStepIndex}
@@ -349,9 +345,9 @@ export default function Simulator() {
                 />
               </div>
               
-              <div className="mt-4 md:mt-6 flex flex-col gap-2 simulation-log">
+              <div className="mt-6 flex flex-col gap-2 simulation-log">
                   <h3 className="text-sm font-semibold px-1">Log Simulasi</h3>
-                  <ScrollArea className="bg-muted/50 rounded-lg p-2 h-48 md:h-64 border border-border">
+                  <ScrollArea className="bg-muted/50 rounded-lg p-2 h-64 border border-border">
                       {steps.length === 0 && <span className="text-muted-foreground p-2 block text-xs">Belum ada simulasi.</span>}
                       {steps.map((s, i) => (
                           <div 

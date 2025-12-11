@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { TreeNode } from '@/types/tree';
 import { calculateTreeLayout, LayoutNode } from '@/lib/utils/layout';
 import { TreeNodeComponent } from './TreeNode';
-import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCcw, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Move } from 'lucide-react';
 
 interface TreeCanvasProps {
   root: TreeNode;
@@ -190,12 +190,54 @@ export const TreeCanvas: React.FC<TreeCanvasProps> = ({
         </g>
       </svg>
 
-      <div className="absolute bottom-4 right-4 flex flex-col gap-2 bg-card p-2 rounded-lg border shadow-lg">
-          <button onClick={() => setZoom(z => z + 0.1)} className="p-2 hover:bg-muted rounded"><ZoomIn size={20}/></button>
-          <button onClick={() => setZoom(z => z - 0.1)} className="p-2 hover:bg-muted rounded"><ZoomOut size={20}/></button>
-          <button onClick={handleAutoLayout} className="p-2 hover:bg-muted rounded" title="Auto Layout">
-             <RotateCcw size={20}/>
-          </button>
+      {/* Navigation Controls */}
+      <div className="absolute bottom-4 right-4 flex flex-col gap-2">
+          {/* Pan Controls - D-pad style */}
+          <div className="bg-card p-1 rounded-lg border shadow-lg grid grid-cols-3 gap-0.5">
+              <div></div>
+              <button 
+                onClick={() => setPan(p => ({...p, y: p.y + 80}))} 
+                className="p-2 hover:bg-muted rounded active:bg-muted/80"
+              >
+                <ChevronUp size={18}/>
+              </button>
+              <div></div>
+              
+              <button 
+                onClick={() => setPan(p => ({...p, x: p.x + 80}))} 
+                className="p-2 hover:bg-muted rounded active:bg-muted/80"
+              >
+                <ChevronLeft size={18}/>
+              </button>
+              <button 
+                onClick={handleAutoLayout} 
+                className="p-2 hover:bg-muted rounded active:bg-muted/80" 
+                title="Reset View"
+              >
+                <Move size={16}/>
+              </button>
+              <button 
+                onClick={() => setPan(p => ({...p, x: p.x - 80}))} 
+                className="p-2 hover:bg-muted rounded active:bg-muted/80"
+              >
+                <ChevronRight size={18}/>
+              </button>
+              
+              <div></div>
+              <button 
+                onClick={() => setPan(p => ({...p, y: p.y - 80}))} 
+                className="p-2 hover:bg-muted rounded active:bg-muted/80"
+              >
+                <ChevronDown size={18}/>
+              </button>
+              <div></div>
+          </div>
+
+          {/* Zoom Controls */}
+          <div className="bg-card p-1 rounded-lg border shadow-lg flex flex-col gap-0.5">
+              <button onClick={() => setZoom(z => Math.min(3, z + 0.2))} className="p-2 hover:bg-muted rounded active:bg-muted/80"><ZoomIn size={18}/></button>
+              <button onClick={() => setZoom(z => Math.max(0.2, z - 0.2))} className="p-2 hover:bg-muted rounded active:bg-muted/80"><ZoomOut size={18}/></button>
+          </div>
       </div>
     </div>
   );
