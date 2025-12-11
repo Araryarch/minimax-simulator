@@ -9,7 +9,6 @@ import { TreeNode, SimulationStep, StepType } from '@/types/tree';
 import { minimax } from '@/lib/algorithms/minimax';
 import { alphaBeta } from '@/lib/algorithms/alphaBeta';
 import { toast } from "sonner";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Menu, X } from 'lucide-react';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import '@/components/TreeComponents.css';
@@ -30,6 +29,7 @@ export default function Simulator() {
   const [editingNodeValue, setEditingNodeValue] = useState<number | null>(null);
 
   const playTimer = useRef<NodeJS.Timeout | number | null>(null);
+  const logItemRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
   // Tour State
   const mounted = useRef(false);
@@ -188,6 +188,16 @@ export default function Simulator() {
       }
       return () => { if (playTimer.current) clearInterval(playTimer.current as number); };
   }, [isPlaying, playbackSpeed, nextStep]);
+
+  // Auto-scroll log to current step
+  useEffect(() => {
+    if (currentStepIndex >= 0) {
+      const logItem = logItemRefs.current.get(currentStepIndex);
+      if (logItem) {
+        logItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+  }, [currentStepIndex]);
 
   // Derived State
   const currentSimulationState = (() => {
@@ -393,11 +403,15 @@ export default function Simulator() {
               
               <div className="mt-6 flex flex-col gap-2 simulation-log">
                   <h3 className="text-sm font-semibold px-1">Log Simulasi</h3>
-                  <ScrollArea className="bg-muted/50 rounded-lg p-2 h-64 border border-border">
+                  <div className="bg-muted/50 rounded-lg p-2 h-64 border border-border overflow-y-auto">
                       {steps.length === 0 && <span className="text-muted-foreground p-2 block text-xs">Belum ada simulasi.</span>}
                       {steps.map((s, i) => (
                           <div 
-                            key={s.id} 
+                            key={s.id}
+                            ref={(el) => {
+                              if (el) logItemRefs.current.set(i, el);
+                              else logItemRefs.current.delete(i);
+                            }}
                             className={`p-2 rounded mb-1 cursor-pointer transition-colors text-xs font-mono border-l-2 ${i === currentStepIndex ? 'bg-primary/20 border-primary text-foreground shadow-sm' : 'border-transparent hover:bg-muted/80'}`}
                             onClick={() => {
                                 setIsPlaying(false);
@@ -408,7 +422,7 @@ export default function Simulator() {
                               <span>{s.description}</span>
                           </div>
                       ))}
-                  </ScrollArea>
+                  </div>
               </div>
           </div>
       </aside>
