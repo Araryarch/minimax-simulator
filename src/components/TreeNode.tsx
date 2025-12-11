@@ -51,18 +51,33 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({
   const isPickingSource = learnPickingId === node.id;
   
   // Animation Logic
-  // In simulation mode: animate changes. In learn mode: instant (mostly).
   const { displayValue: animatedAlpha } = useAnimatedNumber(alpha, 200, !isLearnMode);
   const { displayValue: animatedBeta } = useAnimatedNumber(beta, 200, !isLearnMode);
   const { displayValue: animatedValue } = useAnimatedNumber(value, 200, true);
 
-  const baseClass = "tree-node";
-  const activeClass = isActive ? "active" : "";
-  const visitedClass = isVisited ? "visited" : "";
-  const prunedClass = isPruned ? "pruned" : "";
-  const typeClass = node.isMaxNode ? "max-node" : "min-node";
+  // Styling logic for Shapes
+  const shapeClass = node.isMaxNode 
+     ? "rounded-[6px] border-2" // MAX = Box (Square-ish)
+     : "rounded-full border-2"; // MIN = Circle
+
+  // Pick color based on state
+  const borderClass = isActive 
+     ? "border-primary shadow-[0_0_15px_rgba(var(--primary),0.5)]" 
+     : isVisited 
+        ? "border-primary/80 shadow-sm" 
+        : "border-muted-foreground/40";
+
+  const bgClass = isActive 
+     ? "bg-primary/5" 
+     : "bg-background";
+  
+  const baseClass = "tree-node flex items-center justify-center shadow-sm hover:shadow-md transition-all duration-300";
+  const prunedClass = isPruned ? "opacity-50 grayscale" : "";
   const pickingClass = isPickingSource ? "ring-4 ring-yellow-400 ring-offset-2 animate-pulse" : "";
-  const learnModeClass = isLearnMode ? "cursor-pointer hover:brightness-110" : "";
+  const learnModeClass = isLearnMode ? "cursor-pointer hover:border-primary" : "";
+
+  // Helper styles
+  const containerClassName = `${baseClass} ${shapeClass} ${borderClass} ${bgClass} ${prunedClass} ${pickingClass} ${learnModeClass}`;
 
   const handleAddClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -89,7 +104,7 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({
 
   return (
     <div
-      className={`${baseClass} ${activeClass} ${visitedClass} ${prunedClass} ${typeClass} ${pickingClass} ${learnModeClass} transition-all duration-300`}
+      className={containerClassName}
       style={{
         left: node.x,
         top: node.y,

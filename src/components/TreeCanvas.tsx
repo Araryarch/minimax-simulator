@@ -136,7 +136,7 @@ export const TreeCanvas: React.FC<TreeCanvasProps> = ({
   return (
     <div 
       ref={containerRef}
-      className="w-full h-full overflow-hidden relative cursor-grab active:cursor-grabbing select-none bg-dot-pattern"
+      className="w-full h-full relative cursor-grab active:cursor-grabbing select-none bg-dot-pattern"
       onWheel={handleWheel}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
