@@ -1,8 +1,19 @@
 import { TreeNode, SimulationStep, StepType } from '@/types/tree';
 
+function getNodeLabel(node: TreeNode, depth: number): string {
+  const type = node.isMaxNode ? 'MAX' : 'MIN';
+  if (node.children.length === 0) {
+    return `Daun (nilai: ${node.value ?? '?'})`;
+  }
+  if (depth === 0) {
+    return `Root (${type})`;
+  }
+  return `Node ${type} level ${depth}`;
+}
+
 function formatValue(val: number): string {
-  if (val === Infinity) return '\\infty';
-  if (val === -Infinity) return '-\\infty';
+  if (val === Infinity) return '∞';
+  if (val === -Infinity) return '-∞';
   return val.toString();
 }
 
@@ -10,39 +21,26 @@ function getPruneExplanation(
   isMax: boolean,
   alpha: number,
   beta: number,
-  prunedCount: number
+  prunedCount: number,
+  childValue: number
 ): string {
   const alphaStr = formatValue(alpha);
   const betaStr = formatValue(beta);
   
   if (isMax) {
     // MAX node pruning (beta cutoff)
-    return `### ✂️ Pemangkasan Beta
-Kondisi $\\alpha \\ge \\beta$ terpenuhi ($${alphaStr} \\ge ${betaStr}$).
-
-| Sisi | Nilai |
-|---|---|
-| $\\alpha$ (Max) | $${alphaStr}$ |
-| $\\beta$ (Parent Min) | $${betaStr}$ |
-
-Node **PARENT (MIN)** tidak akan memilih cabang ini karena sudah memiliki opsi $\\le ${betaStr}$.
-Apapun yang ditemukan MAX di sini $\\ge ${alphaStr}$ tidak akan dipilih oleh Parent.
-
-**${prunedCount} cabang dipangkas.**`;
+    return `🚫 PEMANGKASAN BETA! ` +
+      `Alpha (${alphaStr}) ≥ Beta (${betaStr}). ` +
+      `Node MIN di atas sudah punya opsi ≤ ${betaStr}, ` +
+      `jadi tidak akan memilih jalur ini yang sudah menghasilkan ≥ ${alphaStr}. ` +
+      `${prunedCount} cabang DILEWATI karena tidak akan mengubah keputusan!`;
   } else {
     // MIN node pruning (alpha cutoff)
-    return `### ✂️ Pemangkasan Alpha
-Kondisi $\\alpha \\ge \\beta$ terpenuhi ($${alphaStr} \\ge ${betaStr}$).
-
-| Sisi | Nilai |
-|---|---|
-| $\\alpha$ (Parent Max) | $${alphaStr}$ |
-| $\\beta$ (Min) | $${betaStr}$ |
-
-Node **PARENT (MAX)** tidak akan memilih cabang ini karena sudah memiliki opsi $\\ge ${alphaStr}$.
-Apapun yang ditemukan MIN di sini $\\le ${betaStr}$ tidak akan dipilih oleh Parent.
-
-**${prunedCount} cabang dipangkas.**`;
+    return `🚫 PEMANGKASAN ALPHA! ` +
+      `Alpha (${alphaStr}) ≥ Beta (${betaStr}). ` +
+      `Node MAX di atas sudah punya opsi ≥ ${alphaStr}, ` +
+      `jadi tidak akan memilih jalur ini yang sudah menghasilkan ≤ ${betaStr}. ` +
+      `${prunedCount} cabang DILEWATI karena tidak akan mengubah keputusan!`;
   }
 }
 
@@ -57,21 +55,15 @@ export function* alphaBeta(
   treeDepth: number = 0
 ): Generator<SimulationStep, number, void> {
   const currentPath = [...path, node.id];
+  const nodeLabel = getNodeLabel(node, treeDepth);
   const alphaStr = formatValue(alpha);
   const betaStr = formatValue(beta);
-  const nodeType = isMax ? 'MAX' : 'MIN';
 
   yield {
     id: `visit-${node.id}`,
     type: StepType.VISIT,
     nodeId: node.id,
-    description: `### Mengunjungi Node ${nodeType}
-Membawa rentang pencarian:
-
-| Parameter | Nilai |
-|:---:|:---:|
-| $\\alpha$ (Terbaik MAX) | $${alphaStr}$ |
-| $\\beta$ (Terbaik MIN) | $${betaStr}$ |`,
+    description: `Mengunjungi ${nodeLabel} [α=${alphaStr}, β=${betaStr}]`,
     alpha,
     beta,
     visitedIds: [...currentPath],
@@ -84,9 +76,7 @@ Membawa rentang pencarian:
       id: `eval-${node.id}`,
       type: StepType.EVALUATE,
       nodeId: node.id,
-      description: `### 📊 Evaluasi Daun
-Nilai daun ditemukan: **${val}**
-`,
+      description: `📊 Evaluasi daun: nilai = ${val}`,
       currentValue: val,
       alpha,
       beta,
@@ -100,48 +90,34 @@ Nilai daun ditemukan: **${val}**
 
   const childrenToVisit = reverse ? [...node.children].reverse() : node.children;
   let childIndex = 0;
+  let lastChildValue = 0;
 
   for (const child of childrenToVisit) {
     childIndex++;
     const childValue: number = yield* alphaBeta(child, depth - 1, alpha, beta, !isMax, currentPath, reverse, treeDepth + 1);
+    lastChildValue = childValue;
 
     const prevValue = value;
-    const prevAlpha = alpha;
-    const prevBeta = beta;
-    let updated = false;
-
     if (isMax) {
-      if (childValue > value) {
-          value = childValue;
-          updated = true;
-      }
+      value = Math.max(value, childValue);
       alpha = Math.max(alpha, value);
     } else {
-      if (childValue < value) {
-          value = childValue;
-          updated = true;
-      }
+      value = Math.min(value, childValue);
       beta = Math.min(beta, value);
     }
 
+    const newAlphaStr = formatValue(alpha);
+    const newBetaStr = formatValue(beta);
     const valStr = formatValue(value);
-    const childValStr = formatValue(childValue);
-    const mathOp = isMax ? '\\max' : '\\min';
-    const compareOp = isMax ? '>' : '<';
+    const updated = prevValue !== value;
 
     yield {
       id: `update-${node.id}-${child.id}`,
       type: StepType.UPDATE_BOUNDS,
       nodeId: node.id,
-      description: `### Update Nilai ${nodeType}
-Menerima nilai **${childValStr}** dari anak.
-
-| Kondisi | Perhitungan |
-|---|---|
-| Bandingkan | $${childValStr} ${compareOp} ${formatValue(prevValue)}$ ? **${updated ? 'Ya' : 'Tidak'}** |
-| Formula | $v = ${mathOp}(${formatValue(prevValue)}, ${childValStr})$ |
-| **Hasil** | **$v = ${valStr}$** |
-| Update Rentang | $\\alpha=${formatValue(alpha)}, \\beta=${formatValue(beta)}$ |`,
+      description: updated
+        ? `${isMax ? '⬆️ MAX' : '⬇️ MIN'}: Anak ke-${childIndex} = ${childValue} → nilai diperbarui jadi ${valStr} | α=${newAlphaStr}, β=${newBetaStr}`
+        : `${isMax ? '⬆️ MAX' : '⬇️ MIN'}: Anak ke-${childIndex} = ${childValue}, nilai tetap ${valStr} | α=${newAlphaStr}, β=${newBetaStr}`,
       currentValue: value,
       alpha,
       beta,
@@ -150,21 +126,24 @@ Menerima nilai **${childValStr}** dari anak.
     };
 
     if (alpha >= beta) {
-      const remainingChildren = childrenToVisit.length - childIndex;
-      if (remainingChildren > 0) {
+      const prunedCount = childrenToVisit.length - childIndex;
+      
+      // Only emit prune step if there are actually branches to skip
+      if (prunedCount > 0) {
+        const pruneExplanation = getPruneExplanation(isMax, alpha, beta, prunedCount, childValue);
+        
         yield {
           id: `prune-${node.id}`,
           type: StepType.PRUNE,
           nodeId: node.id,
-          description: getPruneExplanation(isMax, alpha, beta, remainingChildren),
-          currentValue: value,
+          description: pruneExplanation,
           alpha,
           beta,
           visitedIds: [...currentPath],
           activePath: currentPath,
         };
-        break; 
       }
+      break; 
     }
   }
 
