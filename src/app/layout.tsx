@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import "driver.js/dist/driver.css";
 import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -17,10 +18,27 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        {children}
-        <Toaster />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem={false}
+          themes={[
+            "light", "dark", 
+            "catppuccin-latte", "catppuccin-mocha", 
+            "cyberpunk", "nord", "dracula", 
+            "sunset", "ocean", "forest",
+            "everblush", "gruvbox-dark", "gruvbox-light",
+            "tokyo-night", "one-dark", 
+            "solarized-dark", "solarized-light",
+            "rose-pine", "kanagawa", "ayu-dark",
+            "palenight", "monokai"
+          ]}
+        >
+          {children}
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );

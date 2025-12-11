@@ -11,6 +11,7 @@ import { alphaBeta } from '@/lib/algorithms/alphaBeta';
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Menu, X } from 'lucide-react';
+import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import '@/components/TreeComponents.css';
 
 export default function Simulator() {
@@ -352,11 +353,12 @@ export default function Simulator() {
         flex flex-col transition-transform duration-300 ease-in-out
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
-          <div className="p-4 border-b border-border flex justify-between items-center">
-              <div>
+          <div className="p-4 border-b border-border flex justify-between items-center gap-2">
+              <div className="flex-1 min-w-0">
                   <h1 className="text-lg font-bold tracking-tight text-primary">Simulator Minimax</h1>
                   <p className="text-xs text-muted-foreground mt-1">Interaktif & Visual</p>
               </div>
+              <ThemeSwitcher />
               <button 
                 onClick={() => setSidebarOpen(false)}
                 className="p-2 rounded-lg hover:bg-muted transition-colors md:hidden"
