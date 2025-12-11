@@ -104,8 +104,8 @@ export default function Simulator() {
       if (!root) return;
       
       const gen = algorithm === 'minimax' 
-          ? minimax(root, 10, true, [], traversalOrder === 'rtl') 
-          : alphaBeta(root, 10, -Infinity, Infinity, true, [], traversalOrder === 'rtl');
+          ? minimax(root, 10, true, [], traversalOrder === 'rtl', 0) 
+          : alphaBeta(root, 10, -Infinity, Infinity, true, [], traversalOrder === 'rtl', 0);
 
       const computedSteps: SimulationStep[] = [];
       for (const step of gen) {

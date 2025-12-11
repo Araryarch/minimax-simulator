@@ -40,7 +40,7 @@ const testTree1: TreeNode = node('root', [
 
 function runMinimaxTest() {
     console.log("--- Testing Minimax ---");
-    const gen = minimax(testTree1, 10, true);
+    const gen = minimax(testTree1, 10, true, [], false, 0);
     let result;
     let steps = 0;
     for (const step of gen) {
@@ -67,7 +67,7 @@ function runMinimaxTest() {
 
 function runAlphaBetaTest() {
     console.log("\n--- Testing Alpha-Beta ---");
-    const gen = alphaBeta(testTree1, 10, -Infinity, Infinity, true);
+    const gen = alphaBeta(testTree1, 10, -Infinity, Infinity, true, [], false, 0);
     let result;
     let visitedNodes = new Set<string>();
     let pruneCount = 0;
