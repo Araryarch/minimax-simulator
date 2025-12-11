@@ -1,7 +1,8 @@
 import React from 'react';
 import { LayoutNode } from '@/lib/utils/layout';
-import { PlusCircle, Pencil, Trash2 } from 'lucide-react';
+import { PlusCircle, Pencil, Trash2, CheckCircle2 } from 'lucide-react';
 import { useAnimatedNumber } from '@/components/AnimatedNumber';
+import { MathRenderer } from '@/components/MathRenderer';
 
 interface TreeNodeProps {
   node: LayoutNode;
@@ -17,6 +18,12 @@ interface TreeNodeProps {
   onMouseDown?: (e: React.MouseEvent) => void;
   onDeleteNode: (id: string) => void;
   isRoot: boolean;
+  // Learn Mode Props
+  isLearnMode?: boolean;
+  learnPickingId?: string | null;
+  learnAlpha?: string;
+  learnBeta?: string;
+  onLearnAlphaBetaChange?: (nodeId: string, type: 'alpha' | 'beta', value: string) => void;
 }
 
 export const TreeNodeComponent: React.FC<TreeNodeProps> = ({
@@ -27,23 +34,35 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({
   value,
   alpha,
   beta,
+  explanation,
   onNodeClick,
   onNodeContextMenu,
+  isLearnMode,
+  learnPickingId,
+  learnAlpha,
+  learnBeta,
+  onLearnAlphaBetaChange,
   ...props
 }) => {
   const isActive = activeId === node.id;
   const isVisited = visitedIds?.includes(node.id);
 
-  // Animated values with sound
-  const { displayValue: animatedAlpha, isAnimating: alphaAnimating } = useAnimatedNumber(alpha, 200, true);
-  const { displayValue: animatedBeta, isAnimating: betaAnimating } = useAnimatedNumber(beta, 200, true);
-  const { displayValue: animatedValue, isAnimating: valueAnimating } = useAnimatedNumber(value, 200, true);
+  // Picking Logic
+  const isPickingSource = learnPickingId === node.id;
+  
+  // Animation Logic
+  // In simulation mode: animate changes. In learn mode: instant (mostly).
+  const { displayValue: animatedAlpha } = useAnimatedNumber(alpha, 200, !isLearnMode);
+  const { displayValue: animatedBeta } = useAnimatedNumber(beta, 200, !isLearnMode);
+  const { displayValue: animatedValue } = useAnimatedNumber(value, 200, true);
 
   const baseClass = "tree-node";
   const activeClass = isActive ? "active" : "";
   const visitedClass = isVisited ? "visited" : "";
   const prunedClass = isPruned ? "pruned" : "";
   const typeClass = node.isMaxNode ? "max-node" : "min-node";
+  const pickingClass = isPickingSource ? "ring-4 ring-yellow-400 ring-offset-2 animate-pulse" : "";
+  const learnModeClass = isLearnMode ? "cursor-pointer hover:brightness-110" : "";
 
   const handleAddClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -54,153 +73,126 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({
     e.stopPropagation();
     onNodeClick(node.id);
   };
-
+  
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!props.isRoot) {
-        props.onDeleteNode(node.id);
-    }
+    props.onDeleteNode(node.id);
+  };
+
+  // Helper to safely format infinity
+  const formatVal = (v: number | undefined | null) => {
+      if (v === Infinity) return '∞';
+      if (v === -Infinity) return '-∞';
+      if (v === undefined || v === null) return '';
+      return Math.round(v * 100) / 100;
   };
 
   return (
-    <g
-      transform={`translate(${node.x}, ${node.y})`}
-      className={`${baseClass} ${activeClass} ${visitedClass} ${prunedClass} ${typeClass}`}
-      onMouseDown={props.onMouseDown}
+    <div
+      className={`${baseClass} ${activeClass} ${visitedClass} ${prunedClass} ${typeClass} ${pickingClass} ${learnModeClass} transition-all duration-300`}
+      style={{
+        left: node.x,
+        top: node.y,
+        width: node.width,
+        height: node.height,
+        position: 'absolute',
+      }}
+      onClick={() => onNodeClick(node.id)}
+      onContextMenu={(e) => {
+          e.preventDefault();
+          onNodeContextMenu(e, node.id);
+      }}
+      id={`node-${node.id}`}
     >
-      <circle r={50} fill="transparent" /> {/* Hit area */}
-
-      {/* Main Shape */}
-      {node.isMaxNode ? (
-          <rect x={-24} y={-24} width={48} height={48} rx={8} className="node-shape" />
-      ) : (
-          <circle r={26} className="node-shape" />
-      )}
-
-      {/* Type Badge */}
-      <g transform="translate(0, -38)">
-          <rect 
-            x={-16} y={-10} width={32} height={20} rx={4} 
-            fill="hsl(var(--background))" 
-            stroke={node.isMaxNode ? "hsl(var(--destructive))" : "hsl(var(--primary))"} 
-            strokeWidth="1.5" 
-          />
-          <text 
-            y={4} fontSize="10" textAnchor="middle" 
-            fill={node.isMaxNode ? "hsl(var(--destructive))" : "hsl(var(--primary))"} 
-            fontWeight="bold"
-          >
-              {node.isMaxNode ? "MAX" : "MIN"}
-          </text>
-      </g>
-
-      {/* Pruned X */}
-      {isPruned && (
-        <text y={8} fontSize="40" fill="hsl(var(--destructive))" textAnchor="middle" dominantBaseline="middle" style={{ pointerEvents: 'none', opacity: 0.9 }}>
-            ✕
-        </text>
-      )}
-
-      {/* Value - Animated */}
-      {!isPruned && (
-        <foreignObject x={-30} y={-12} width={60} height={30}>
-          <div className="flex items-center justify-center h-full">
-            <span 
-              className={`node-value text-[16px] font-bold transition-all duration-200 ${
-                valueAnimating ? 'scale-125 text-primary' : ''
-              }`}
-              style={{ color: valueAnimating ? undefined : 'hsl(var(--foreground))' }}
-            >
-              {animatedValue !== undefined ? animatedValue : ((node.value !== null) ? node.value : '?')}
-            </span>
-          </div>
-        </foreignObject>
-      )}
-      
-      {/* Alpha Beta - Animated with counting */}
-      {(alpha !== undefined || beta !== undefined) && !isPruned && (
-        <foreignObject x={-60} y={32} width={120} height={24}>
-          <div className="flex items-center justify-center gap-2 text-[11px] font-semibold">
-            {alpha !== undefined && (
-              <span className={`px-1.5 py-0.5 rounded transition-all duration-150 ${
-                alphaAnimating 
-                  ? 'bg-red-500/40 text-red-300 scale-110' 
-                  : 'bg-red-500/20 text-red-400'
-              }`}>
-                α:{animatedAlpha === Infinity ? '∞' : animatedAlpha === -Infinity ? '-∞' : animatedAlpha}
-              </span>
-            )}
-            {beta !== undefined && (
-              <span className={`px-1.5 py-0.5 rounded transition-all duration-150 ${
-                betaAnimating 
-                  ? 'bg-blue-500/40 text-blue-300 scale-110' 
-                  : 'bg-blue-500/20 text-blue-400'
-              }`}>
-                β:{animatedBeta === Infinity ? '∞' : animatedBeta === -Infinity ? '-∞' : animatedBeta}
-              </span>
-            )}
-          </div>
-        </foreignObject>
-      )}
-
-
-
-      {/* Actions */}
-      <g className="node-actions opacity-0 hover:opacity-100 transition-opacity" transform="translate(35, -20)">
-         <foreignObject width="60" height="60" style={{ overflow: 'visible' }}>
-             <div className="flex flex-col gap-1">
-                 <button onClick={handleAddClick} className="p-1 bg-primary text-primary-foreground rounded-full hover:scale-110 transition-transform shadow-sm" title="Add Child">
-                    <PlusCircle size={16} />
-                 </button>
-                 {node.children.length === 0 && (
-                     <button onClick={handleEditClick} className="p-1 bg-accent text-accent-foreground rounded-full hover:scale-110 transition-transform shadow-sm" title="Edit Value">
-                        <Pencil size={16} />
-                     </button>
-                 )}
-                 {!props.isRoot && (
-                    <button onClick={handleDeleteClick} className="p-1 bg-destructive text-destructive-foreground rounded-full hover:scale-110 transition-transform shadow-sm" title="Delete Node">
-                        <Trash2 size={16} />
-                    </button>
-                 )}
-             </div>
-         </foreignObject>
-      </g>
-
-      {/* Explanation Tooltip (Moved to end for Z-index within node group) */}
-      {props.explanation && (() => {
-        const textLen = props.explanation.length;
-        const tooltipWidth = Math.min(Math.max(140, textLen * 4), 320);
-        const tooltipHeight = Math.max(45, Math.ceil(textLen / 40) * 18 + 20);
-        const halfWidth = tooltipWidth / 2;
-        
-        return (
-          <g transform={`translate(0, ${-50 - tooltipHeight})`} style={{ pointerEvents: 'none' }}>
-            <rect 
-              x={-halfWidth} 
-              y={0} 
-              width={tooltipWidth} 
-              height={tooltipHeight}
-              rx={8}
-              fill="hsl(var(--popover))" 
-              stroke="hsl(var(--primary))" 
-              strokeWidth="2"
-              filter="drop-shadow(0 4px 12px rgb(0 0 0 / 0.4))"
-            />
-            {/* Arrow pointing down */}
-            <path 
-              d={`M -8 ${tooltipHeight} L 0 ${tooltipHeight + 10} L 8 ${tooltipHeight} Z`}
-              fill="hsl(var(--popover))"
-              stroke="hsl(var(--primary))"
-              strokeWidth="2"
-            />
-            <foreignObject x={-halfWidth + 8} y={6} width={tooltipWidth - 16} height={tooltipHeight - 10}>
-              <div className="text-[11px] text-center leading-snug p-1 text-popover-foreground font-medium">
-                {props.explanation}
+      {/* Explanation Popup */}
+      {explanation && !isLearnMode && (
+          <div className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 w-max max-w-[350px] p-2.5 bg-popover/95 backdrop-blur text-popover-foreground rounded-xl shadow-xl border border-border z-50 animate-in fade-in slide-in-from-bottom-2 duration-200 pointer-events-none">
+              <div className="max-h-[250px] overflow-y-auto custom-scrollbar">
+                <MathRenderer content={explanation} compact={true} />
               </div>
-            </foreignObject>
-          </g>
-        );
-      })()}
-    </g>
+              {/* Arrow */}
+              <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-[6px] border-transparent border-t-popover/95" />
+          </div>
+      )}
+
+      <div className="node-content flex flex-col items-center justify-center w-full h-full relative group">
+        <span className="node-id absolute top-0.5 right-1.5 text-[8px] opacity-40 font-mono">{node.id.slice(0, 4)}</span>
+        
+        {/* Pruning Indicator */}
+        {isPruned && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded z-10">
+                <span className="text-2xl">❌</span>
+            </div>
+        )}
+
+        {/* Node Type Indicator */}
+        <span className="text-[9px] font-bold uppercase tracking-wider mb-0.5 opacity-70">
+            {node.isMaxNode ? 'MAX' : 'MIN'}
+        </span>
+
+        {/* Main Value */}
+        <div className="text-lg font-bold leading-none my-1">
+             {/* Picking Indicator */}
+             {isPickingSource && animatedValue === undefined ? (
+                 <span className="text-yellow-500 animate-bounce">?</span>
+             ) : (
+                formatVal(animatedValue) || (isLearnMode && !isPruned ? <span className="text-muted-foreground/30 text-xs">-</span> : '')
+             )}
+        </div>
+
+        {/* Controls Overlay (Only Simulate Mode & Hover) */}
+        {!isLearnMode && !isPruned && (
+        <div className="node-controls absolute -bottom-8 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-20 bg-background/80 rounded-full px-2 py-1 shadow-sm border border-border pointer-events-none group-hover:pointer-events-auto">
+             <button onClick={handleAddClick} className="p-1 hover:text-green-500 transition-colors" title="Add Child">
+                <PlusCircle size={14} />
+             </button>
+             <button onClick={handleEditClick} className="p-1 hover:text-blue-500 transition-colors" title="Edit Value">
+                <Pencil size={14} />
+             </button>
+             {!props.isRoot && <button onClick={handleDeleteClick} className="p-1 hover:text-red-500 transition-colors" title="Delete Node">
+                <Trash2 size={14} />
+             </button>}
+        </div>
+        )}
+        
+        {/* Learn Mode: Picking Indicator Text */}
+        {isPickingSource && (
+             <div className="absolute -top-8 bg-yellow-400 text-yellow-900 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg animate-bounce whitespace-nowrap z-30 pointer-events-none">
+                 👇 Ambil nilai anak
+             </div>
+        )}
+
+        {/* Alpha Beta Values */}
+        {/* If Learn Mode: Input Fields */}
+        {isLearnMode && !isPruned ? (
+             <div className="w-[90%] flex gap-1 mt-1 z-20" onClick={e => e.stopPropagation()}>
+                 <input 
+                    value={learnAlpha || ''} 
+                    onChange={e => onLearnAlphaBetaChange?.(node.id, 'alpha', e.target.value)}
+                    placeholder="α"
+                    className="w-1/2 h-5 text-[10px] text-center bg-background border border-border rounded focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                    title="Alpha"
+                    disabled={isPruned}
+                 />
+                 <input 
+                    value={learnBeta || ''} 
+                    onChange={e => onLearnAlphaBetaChange?.(node.id, 'beta', e.target.value)}
+                    placeholder="β"
+                    className="w-1/2 h-5 text-[10px] text-center bg-background border border-border rounded focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                    title="Beta"
+                    disabled={isPruned}
+                 />
+             </div>
+        ) : (
+             // Simulate Mode: Display Values
+             (alpha !== undefined || beta !== undefined) && !isPruned && (
+                <div className="flex gap-2 text-[9px] font-mono mt-0.5 opacity-80">
+                    <span title="Alpha" className="text-blue-600 dark:text-blue-400">α:{formatVal(animatedAlpha)}</span>
+                    <span title="Beta" className="text-red-600 dark:text-red-400">β:{formatVal(animatedBeta)}</span>
+                </div>
+            )
+        )}
+      </div>
+    </div>
   );
 };

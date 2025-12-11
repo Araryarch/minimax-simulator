@@ -91,11 +91,15 @@ export default function Simulator() {
   const [mode, setMode] = useState<'simulate' | 'learn'>('simulate');
   
   // Learn Mode State
-  const [userAnswers, setUserAnswers] = useState<Record<string, number>>({});
+  // userAnswers now stores value (from child pick), and alpha/beta (manual input)
+  const [userAnswers, setUserAnswers] = useState<Record<string, { value?: number, alpha?: string, beta?: string }>>({});
   const [userPruned, setUserPruned] = useState<Set<string>>(new Set());
   const [learnFeedback, setLearnFeedback] = useState<{correct: number, wrong: number, missedPrune: number} | null>(null);
   
-  // Modal State
+  // Interaction State for "Picking Child"
+  const [pickingForNodeId, setPickingForNodeId] = useState<string | null>(null);
+
+  // Modal State (Keep for Simulation Mode text edit only, Learn Mode uses direct interaction)
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [editingNodeValue, setEditingNodeValue] = useState<number | null>(null);
@@ -122,12 +126,24 @@ export default function Simulator() {
     let wrong = 0;
     let missedPrune = 0;
     
+    // Validate Internal Nodes
     Object.keys(correctValues).forEach(id => {
+        // Skip leaves (they are pre-filled) unless we want to validate something on them? 
+        // Leaves usually don't have alpha/beta to input in standard static view, but algorithms carry alpha/beta DOWN.
+        // Let's focus on:
+        // 1. Correct Value in Internal Node
+        // 2. Correct Alpha/Beta in visited nodes (Hard to validate precisely without step-by-step, 
+        //    but let's say final alpha/beta state? Or just checking if user input reasonable values?)
+        
+        // For simplicity in this "Free Mode":
+        // We validating Final Value of the node.
+        
         if (prunedIds.has(id)) return;
 
         const node = findNodeById(root, id);
         if (node && node.children.length > 0) {
-            if (userAnswers[id] === correctValues[id]) {
+            const userVal = userAnswers[id]?.value;
+            if (userVal === correctValues[id]) {
                 correct++;
             } else {
                 wrong++;
@@ -153,7 +169,12 @@ export default function Simulator() {
     
     if (wrong === 0 && missedPrune === 0) {
         sfx.playSuccess();
-        toast.success("Selamat! Semua jawaban benar! 🎉");
+        toast.success(
+            <div className="flex flex-col gap-1">
+                <span className="font-bold">Luar Biasa! 🎉</span>
+                <span className="text-xs">Semua nilai node & pemangkasan benar!</span>
+            </div>
+        );
     } else {
         sfx.playError();
         toast.error(`Masih ada yang salah. Benar: ${correct}, Salah: ${wrong}, Lupa Pangkas: ${missedPrune}`);
@@ -164,6 +185,7 @@ export default function Simulator() {
       setUserAnswers({});
       setUserPruned(new Set());
       setLearnFeedback(null);
+      setPickingForNodeId(null);
       sfx.playClick();
   };
 
@@ -175,24 +197,95 @@ export default function Simulator() {
       sfx.playClick();
       
       if (newMode === 'learn') {
-          toast.info("Mode Belajar: Klik node untuk isi nilai, Klik Kanan untuk pangkas.", { duration: 4000 });
+          toast.info("Mode Belajar Aktif!", {
+              description: "1. Klik node internal untuk ambil nilai dari anak.\n2. Ketik Alpha/Beta langsung di kotak.",
+              duration: 5000
+          });
       }
   };
 
-  const handleLearnNodeClick = (id: string) => {
-      const node = root ? findNodeById(root, id) : null;
-      if (node) {
-          setEditingNodeId(id);
-          const existing = userAnswers[id];
-          setEditingNodeValue(existing !== undefined ? existing : (node.value !== null ? node.value : null));
-          setIsModalOpen(true);
+  // Handler: User clicks a node in Learn Mode
+  const handleLearnNodeClick = (clickedId: string) => {
+      const clickedNode = root ? findNodeById(root, clickedId) : null;
+      if (!clickedNode) return;
+
+      // Logic 1: If we are currently "Picking a source for Parent", and this clicked node is a valid child
+      if (pickingForNodeId) {
+          const parentNode = findNodeById(root!, pickingForNodeId);
+          
+          if (parentNode) {
+              // Check if clicked node is a child of the parent we are picking for
+              const isChild = parentNode.children.some(c => c.id === clickedId);
+              
+              if (isChild) {
+                  // GET VALUE Logic
+                  // We get value from the clicked child. 
+                  // Child must have a value (either innate leaf value, or user-filled value)
+                  
+                  // Priority: User filled value > Innate value (leaf)
+                  const childUserValue = userAnswers[clickedId]?.value;
+                  const childRealValue = clickedNode.value;
+                  
+                  const valueToTake = childUserValue !== undefined ? childUserValue : childRealValue;
+
+                  if (valueToTake !== null && valueToTake !== undefined) {
+                      // Set parent value
+                      setUserAnswers(prev => ({
+                          ...prev,
+                          [pickingForNodeId]: { ...prev[pickingForNodeId], value: valueToTake }
+                      }));
+                      
+                      sfx.playPop(); // Fun sound
+                      toast.success(`Nilai ${valueToTake} diambil dari ${clickedNode.isMaxNode ? 'MAX' : 'MIN'} node!`, { duration: 1000 });
+                      setPickingForNodeId(null); // Done picking
+                      return;
+                  } else {
+                      toast.warning("Node anak ini belum punya nilai! Isi dulu nilainya.");
+                      return;
+                  }
+              }
+          }
+          
+          // If clicked anywhere else (or same node), cancel picking or switch picking?
+          if (clickedId === pickingForNodeId) {
+             setPickingForNodeId(null); // Cancel
+             return;
+          }
       }
+
+      // Logic 2: Start Picking Mode for this node (if it's internal)
+      // Leaf nodes don't need to pick values.
+      if (clickedNode.children.length > 0) {
+          setPickingForNodeId(clickedId);
+          sfx.playClick();
+          toast("Pilih Child Node", {
+              description: "Klik salah satu node anak untuk mengambil nilainya (bubble-up).",
+              duration: 2000
+          });
+      } else {
+          // Leaf node clicked -> Maybe show edit modal if it's a custom tree?
+          // For now, assume leaves are fixed constant.
+          // But allow editing alpha/beta via input (handled by input change, not click).
+      }
+  };
+
+  // Handler: User types in Alpha/Beta input
+  const handleUserAlphaBetaChange = (nodeId: string, type: 'alpha' | 'beta', value: string) => {
+      setUserAnswers(prev => ({
+          ...prev,
+          [nodeId]: { 
+              ...prev[nodeId], 
+              [type]: value 
+          }
+      }));
+      // Optional: Play subtle typing sound?
   };
 
   const handleLearnContextMenu = (id: string) => {
-      // Allow marking prune on ANY node in learn mode (user logic)
-      // Actually strictly internal nodes? No, prune usually happens at branch.
-      // Let user just mark whatever they think is pruned.
+      if (algorithm !== 'alphabeta') {
+          toast.warning("Pruning hanya aktif di algoritma Alpha-Beta.");
+          return;
+      }
       
       setUserPruned(prev => {
           const next = new Set(prev);
@@ -593,14 +686,8 @@ export default function Simulator() {
   const handleEditConfirm = (newVal: number) => {
       if (!root || !editingNodeId) return;
       
-      if (mode === 'learn') {
-          // Learn Mode: Update User Answer
-          setUserAnswers(prev => ({
-              ...prev,
-              [editingNodeId]: newVal
-          }));
-          sfx.playPop();
-      } else {
+      // Learn Mode no longer uses this modal for values.
+      if (mode === 'simulate') {
           // Simulate Mode: Update Tree Structure
           const clone = JSON.parse(JSON.stringify(root));
           const updateNode = (n: TreeNode) => {
@@ -621,6 +708,7 @@ export default function Simulator() {
     <div className="flex w-full h-screen bg-background text-foreground overflow-hidden relative">
       
       {/* Mobile Menu Button - floating */}
+      {/* ... (keep as is, handled by unchanged lines if possible, but easier to just start render here) ... */}
       <button 
         onClick={() => setSidebarOpen(true)}
         className="fixed top-4 left-4 z-30 p-2.5 rounded-lg bg-card border border-border shadow-lg hover:bg-muted transition-colors md:hidden"
@@ -645,6 +733,7 @@ export default function Simulator() {
         flex flex-col transition-transform duration-300 ease-in-out
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
+          {/* ... Sidebar Header ... */}
           <div className="p-4 border-b border-border flex justify-between items-center gap-2">
               <div className="flex-1 min-w-0">
                   <h1 className="text-lg font-bold tracking-tight text-primary">Simulator Minimax</h1>
@@ -661,6 +750,7 @@ export default function Simulator() {
           
           <div className="p-4 flex-1 overflow-y-auto simulation-sidebar">
               {/* Mode Switcher */}
+              {/* ... (Assumed unchanged) ... */}
               <div className="flex p-1 bg-muted/50 rounded-lg mb-4">
                   <button
                     onClick={() => toggleMode('simulate')}
@@ -684,6 +774,7 @@ export default function Simulator() {
 
               {mode === 'simulate' ? (
                   <>
+                      {/* Simulation Controls */}
                       <div className="simulation-controls">
                         <Controls 
                         currentStep={currentStepIndex}
@@ -746,6 +837,7 @@ export default function Simulator() {
                       </div>
                   </>
               ) : (
+                  // Learn Mode Sidebar
                   <div className="flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
                       <div className="bg-muted/30 p-4 rounded-lg border border-border">
                           <h3 className="font-semibold mb-2 flex items-center gap-2">
@@ -753,7 +845,8 @@ export default function Simulator() {
                               Mode Belajar
                           </h3>
                           <p className="text-xs text-muted-foreground leading-relaxed mb-4">
-                              Kerjakan pohon ini sendiri! Klik node untuk mengisi nilai, dan klik kanan untuk memangkas (alpha-beta).
+                              1. Klik node internal untuk memilih sumber nilai. 
+                              <br/> 2. Ketik Alpha/Beta langsung di node.
                           </p>
                           
                           <div className="grid grid-cols-2 gap-2 mb-4">
@@ -797,6 +890,7 @@ export default function Simulator() {
                       </div>
 
                       {learnFeedback && (
+                          // ... Learn Feedback (assumed same)
                           <div className={`p-4 rounded-lg border ${learnFeedback.wrong === 0 && learnFeedback.missedPrune === 0 ? 'bg-green-500/10 border-green-500/50' : 'bg-red-500/10 border-red-500/50'}`}>
                               <h4 className="font-bold mb-2 flex items-center gap-2">
                                   {learnFeedback.wrong === 0 && learnFeedback.missedPrune === 0 ? <CheckCircle2 className="text-green-500" /> : <XCircle className="text-red-500" />}
@@ -831,31 +925,39 @@ export default function Simulator() {
              <TreeCanvas 
                 root={root} 
                 simulationState={mode === 'simulate' ? currentSimulationState : {
-                    activeId: undefined, // No active step logic in learn mode yet
-                    visitedIds: [], // Maybe track clicks?
-                    currentValues: userAnswers,
-                    alphaValues: {}, // User doesn't input alpha/beta yet
-                    betaValues: {},
+                    // Minimal simulation state for learn mode base functionality
+                    activeId: undefined,
+                    visitedIds: [],
+                    // We don't populate currentValues/alphaValues here directly from userAnswers 
+                    // because TreeCanvas needs to handle Learn Mode separately via specific props
                     prunedIds: Array.from(userPruned)
                 }}
-                onAddChild={mode === 'simulate' ? addChild : handleLearnContextMenu} // Hijack: Right click adds child in sim, toggles prune in learn
-                onEditNode={mode === 'simulate' ? openEditModal : handleLearnNodeClick} // Edit behavior changes
+                onAddChild={mode === 'simulate' ? addChild : handleLearnContextMenu} 
+                onEditNode={mode === 'simulate' ? openEditModal : handleLearnNodeClick} 
                 onDeleteNode={handleDeleteNode}
+                
+                // New Props for Learn Mode
                 isLearnMode={mode === 'learn'}
+                learnPickingId={pickingForNodeId}
+                learnAnswers={userAnswers}
+                onLearnAlphaBetaChange={handleUserAlphaBetaChange}
              />
          ) : (
              <div className="flex items-center justify-center h-full text-muted-foreground">
                  Loading Tree...
              </div>
          )}
+         
+         <EditNodeModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            onConfirm={handleEditConfirm}
+            initialValue={editingNodeValue}
+            isLeaf={editingNodeId ? (findNodeById(root!, editingNodeId!)?.children.length === 0) : false}
+         />
       </main>
 
-      <EditNodeModal 
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onConfirm={handleEditConfirm}
-        initialValue={editingNodeValue}
-      />
+
     </div>
   );
 }

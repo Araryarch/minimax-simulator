@@ -5,6 +5,7 @@ interface EditNodeModalProps {
   onClose: () => void;
   onConfirm: (value: number) => void;
   initialValue: number | null;
+  isLeaf?: boolean;
 }
 
 export const EditNodeModal: React.FC<EditNodeModalProps> = ({ isOpen, onClose, onConfirm, initialValue }) => {
