@@ -224,6 +224,42 @@ export default function Simulator() {
     }
   }, [currentStepIndex]);
 
+  // Show toast for pruning events
+  useEffect(() => {
+    if (currentStepIndex >= 0 && steps[currentStepIndex]) {
+      const step = steps[currentStepIndex];
+      if (step.type === StepType.PRUNE) {
+        // Count how many nodes would be visited without pruning
+        const remainingSteps = steps.slice(currentStepIndex + 1);
+        
+        toast(
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2 font-bold text-destructive">
+              <span className="text-lg">✂️</span>
+              <span>Pemangkasan Terjadi!</span>
+            </div>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              <strong>Tanpa pemangkasan:</strong> Algoritma akan tetap mengunjungi 
+              cabang-cabang yang tersisa meskipun hasilnya tidak akan mengubah keputusan akhir.
+            </p>
+            <p className="text-sm leading-relaxed">
+              <strong>Dengan pemangkasan:</strong> Kita <em>menghemat waktu</em> dengan 
+              melewati cabang yang tidak perlu dieksplorasi! 🚀
+            </p>
+            <div className="mt-1 p-2 bg-muted rounded text-xs">
+              💡 <strong>Intinya:</strong> Node parent sudah menemukan pilihan yang lebih baik, 
+              jadi cabang ini pasti tidak akan dipilih.
+            </div>
+          </div>,
+          {
+            duration: 6000,
+            position: 'bottom-right',
+          }
+        );
+      }
+    }
+  }, [currentStepIndex, steps]);
+
   // Derived State
   const currentSimulationState = (() => {
       if (currentStepIndex === -1 || !steps[currentStepIndex]) return {};

@@ -17,6 +17,33 @@ function formatValue(val: number): string {
   return val.toString();
 }
 
+function getPruneExplanation(
+  isMax: boolean,
+  alpha: number,
+  beta: number,
+  prunedCount: number,
+  childValue: number
+): string {
+  const alphaStr = formatValue(alpha);
+  const betaStr = formatValue(beta);
+  
+  if (isMax) {
+    // MAX node pruning (beta cutoff)
+    return `🚫 PEMANGKASAN BETA! ` +
+      `Alpha (${alphaStr}) ≥ Beta (${betaStr}). ` +
+      `Node MIN di atas sudah punya opsi ≤ ${betaStr}, ` +
+      `jadi tidak akan memilih jalur ini yang sudah menghasilkan ≥ ${alphaStr}. ` +
+      `${prunedCount} cabang DILEWATI karena tidak akan mengubah keputusan!`;
+  } else {
+    // MIN node pruning (alpha cutoff)
+    return `🚫 PEMANGKASAN ALPHA! ` +
+      `Alpha (${alphaStr}) ≥ Beta (${betaStr}). ` +
+      `Node MAX di atas sudah punya opsi ≥ ${alphaStr}, ` +
+      `jadi tidak akan memilih jalur ini yang sudah menghasilkan ≤ ${betaStr}. ` +
+      `${prunedCount} cabang DILEWATI karena tidak akan mengubah keputusan!`;
+  }
+}
+
 export function* alphaBeta(
   node: TreeNode,
   depth: number,
@@ -49,7 +76,7 @@ export function* alphaBeta(
       id: `eval-${node.id}`,
       type: StepType.EVALUATE,
       nodeId: node.id,
-      description: `Evaluasi daun: nilai = ${val}`,
+      description: `📊 Evaluasi daun: nilai = ${val}`,
       currentValue: val,
       alpha,
       beta,
@@ -63,10 +90,12 @@ export function* alphaBeta(
 
   const childrenToVisit = reverse ? [...node.children].reverse() : node.children;
   let childIndex = 0;
+  let lastChildValue = 0;
 
   for (const child of childrenToVisit) {
     childIndex++;
     const childValue: number = yield* alphaBeta(child, depth - 1, alpha, beta, !isMax, currentPath, reverse, treeDepth + 1);
+    lastChildValue = childValue;
 
     const prevValue = value;
     if (isMax) {
@@ -87,8 +116,8 @@ export function* alphaBeta(
       type: StepType.UPDATE_BOUNDS,
       nodeId: node.id,
       description: updated
-        ? `${isMax ? 'MAX' : 'MIN'}: Anak ke-${childIndex} = ${childValue} → nilai = ${valStr}, α=${newAlphaStr}, β=${newBetaStr}`
-        : `${isMax ? 'MAX' : 'MIN'}: Anak ke-${childIndex} = ${childValue}, tetap α=${newAlphaStr}, β=${newBetaStr}`,
+        ? `${isMax ? '⬆️ MAX' : '⬇️ MIN'}: Anak ke-${childIndex} = ${childValue} → nilai diperbarui jadi ${valStr} | α=${newAlphaStr}, β=${newBetaStr}`
+        : `${isMax ? '⬆️ MAX' : '⬇️ MIN'}: Anak ke-${childIndex} = ${childValue}, nilai tetap ${valStr} | α=${newAlphaStr}, β=${newBetaStr}`,
       currentValue: value,
       alpha,
       beta,
@@ -98,11 +127,13 @@ export function* alphaBeta(
 
     if (alpha >= beta) {
       const prunedCount = childrenToVisit.length - childIndex;
+      const pruneExplanation = getPruneExplanation(isMax, alpha, beta, prunedCount, childValue);
+      
       yield {
         id: `prune-${node.id}`,
         type: StepType.PRUNE,
         nodeId: node.id,
-        description: `PANGKAS! α(${newAlphaStr}) ≥ β(${newBetaStr}), ${prunedCount} cabang dilewati`,
+        description: pruneExplanation,
         alpha,
         beta,
         visitedIds: [...currentPath],
@@ -118,7 +149,7 @@ export function* alphaBeta(
     id: `backtrack-${node.id}`,
     type: StepType.BACKTRACK,
     nodeId: node.id,
-    description: `Kembali ke parent dengan nilai ${finalValStr}`,
+    description: `↩️ Kembali ke parent dengan nilai ${finalValStr}`,
     currentValue: value,
     alpha,
     beta,
