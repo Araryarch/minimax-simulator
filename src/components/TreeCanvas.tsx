@@ -325,7 +325,7 @@ export const TreeCanvas: React.FC<TreeCanvasProps> = ({
                 cx={node.x * minimapScale}
                 cy={node.y * minimapScale}
                 r={3}
-                fill={node.isMaxNode ? '#ef4444' : '#3b82f6'}
+                fill={node.isMaxNode ? 'hsl(var(--destructive))' : 'hsl(var(--primary))'}
                 opacity={simulationState?.visitedIds?.includes(node.id) ? 1 : 0.5}
               />
             ))}

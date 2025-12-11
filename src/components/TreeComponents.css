@@ -28,20 +28,26 @@
     stroke-width: 3px;
 }
 
-/* Node Types */
+/* Node Types - Using theme colors */
 .tree-node.max-node .node-shape {
-    stroke: #ef4444; /* Red for Max */
+    stroke: hsl(var(--destructive));
     stroke-width: 3px;
 }
 
 .tree-node.min-node .node-shape {
-    stroke: #3b82f6; /* Blue for Min */
+    stroke: hsl(var(--primary));
     stroke-width: 3px;
 }
 
+/* Node Value - Adapts to theme */
 .node-value {
     fill: hsl(var(--foreground));
     font-weight: bold;
+}
+
+/* Active node value should contrast with accent background */
+.tree-node.active .node-value {
+    fill: hsl(var(--accent-foreground));
 }
 
 /* Pruned */
@@ -76,4 +82,18 @@
 }
 .tree-node:hover .node-actions {
     opacity: 1;
+}
+
+/* MAX/MIN Badge Colors - Using CSS Variables */
+.max-badge-stroke {
+    stroke: hsl(var(--destructive));
+}
+.max-badge-fill {
+    fill: hsl(var(--destructive));
+}
+.min-badge-stroke {
+    stroke: hsl(var(--primary));
+}
+.min-badge-fill {
+    fill: hsl(var(--primary));
 }

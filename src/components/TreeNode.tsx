@@ -73,15 +73,24 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({
 
       {/* Type Badge */}
       <g transform="translate(0, -38)">
-          <rect x={-16} y={-10} width={32} height={20} rx={4} fill="hsl(var(--background))" stroke={node.isMaxNode ? "#ef4444" : "#3b82f6"} strokeWidth="1.5" />
-          <text y={4} fontSize="10" textAnchor="middle" fill={node.isMaxNode ? "#ef4444" : "#3b82f6"} fontWeight="bold">
+          <rect 
+            x={-16} y={-10} width={32} height={20} rx={4} 
+            fill="hsl(var(--background))" 
+            stroke={node.isMaxNode ? "hsl(var(--destructive))" : "hsl(var(--primary))"} 
+            strokeWidth="1.5" 
+          />
+          <text 
+            y={4} fontSize="10" textAnchor="middle" 
+            fill={node.isMaxNode ? "hsl(var(--destructive))" : "hsl(var(--primary))"} 
+            fontWeight="bold"
+          >
               {node.isMaxNode ? "MAX" : "MIN"}
           </text>
       </g>
 
       {/* Pruned X */}
       {isPruned && (
-        <text y={8} fontSize="40" fill="#ef4444" textAnchor="middle" dominantBaseline="middle" style={{ pointerEvents: 'none', opacity: 0.9 }}>
+        <text y={8} fontSize="40" fill="hsl(var(--destructive))" textAnchor="middle" dominantBaseline="middle" style={{ pointerEvents: 'none', opacity: 0.9 }}>
             ✕
         </text>
       )}
@@ -106,16 +115,16 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({
       <g className="node-actions opacity-0 hover:opacity-100 transition-opacity" transform="translate(35, -20)">
          <foreignObject width="60" height="60" style={{ overflow: 'visible' }}>
              <div className="flex flex-col gap-1">
-                 <button onClick={handleAddClick} className="p-1 bg-blue-500 rounded-full text-white hover:scale-110 transition-transform shadow-sm" title="Add Child">
+                 <button onClick={handleAddClick} className="p-1 bg-primary text-primary-foreground rounded-full hover:scale-110 transition-transform shadow-sm" title="Add Child">
                     <PlusCircle size={16} />
                  </button>
                  {(node.children.length === 0 || value !== undefined) && (
-                     <button onClick={handleEditClick} className="p-1 bg-amber-500 rounded-full text-white hover:scale-110 transition-transform shadow-sm" title="Edit Value">
+                     <button onClick={handleEditClick} className="p-1 bg-accent text-accent-foreground rounded-full hover:scale-110 transition-transform shadow-sm" title="Edit Value">
                         <Pencil size={16} />
                      </button>
                  )}
                  {!props.isRoot && (
-                    <button onClick={handleDeleteClick} className="p-1 bg-red-500 rounded-full text-white hover:scale-110 transition-transform shadow-sm" title="Delete Node">
+                    <button onClick={handleDeleteClick} className="p-1 bg-destructive text-destructive-foreground rounded-full hover:scale-110 transition-transform shadow-sm" title="Delete Node">
                         <Trash2 size={16} />
                     </button>
                  )}
