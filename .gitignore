@@ -32,3 +32,4 @@ ts-debug.log*
 # Typescript
 *.tsbuildinfo
 next-env.d.ts
+node_modules
