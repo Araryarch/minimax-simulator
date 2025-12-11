@@ -1,5 +1,5 @@
-import React from 'react';
-import { Play, Pause, SkipForward, SkipBack, RotateCcw, Settings, RefreshCcw } from 'lucide-react';
+import React, { useState } from 'react';
+import { Play, Pause, SkipForward, SkipBack, RotateCcw, RefreshCcw, Plus, TreeDeciduous } from 'lucide-react';
 
 interface ControlsProps {
     currentStep: number;
@@ -14,7 +14,8 @@ interface ControlsProps {
     onSpeedChange: (speed: number) => void;
     algorithm: 'minimax' | 'alphabeta';
     onAlgorithmChange: (algo: 'minimax' | 'alphabeta') => void;
-    onGenerateTree: () => void;
+    onGenerateTree: (depth: number, branching: number) => void;
+    onCreateEmptyTree: (depth: number, branching: number) => void;
     traversalOrder: 'ltr' | 'rtl';
     onTraversalOrderChange: (order: 'ltr' | 'rtl') => void;
 }
@@ -33,9 +34,13 @@ export const Controls: React.FC<ControlsProps> = ({
     algorithm,
     onAlgorithmChange,
     onGenerateTree,
+    onCreateEmptyTree,
     traversalOrder,
     onTraversalOrderChange
 }) => {
+  const [treeDepth, setTreeDepth] = useState(3);
+  const [treeBranching, setTreeBranching] = useState(2);
+
   return (
     <div className="flex flex-col gap-6 p-4 bg-card border rounded-xl shadow-sm">
         
@@ -119,15 +124,57 @@ export const Controls: React.FC<ControlsProps> = ({
              </div>
         </div>
 
-        {/* Actions */}
-        <div className="pt-4 border-t">
-            <button 
-                onClick={onGenerateTree}
-                className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-muted-foreground/25 rounded-lg text-sm font-medium hover:border-primary/50 hover:bg-accent transition-all"
-            >
-                <RefreshCcw size={16} />
-                Generate Pohon Baru
-            </button>
+        {/* Tree Settings */}
+        <div className="pt-4 border-t flex flex-col gap-3">
+            <div className="flex items-center gap-2 text-sm font-medium">
+                <TreeDeciduous size={16} />
+                <span>Pengaturan Pohon</span>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-2">
+                <div className="flex flex-col gap-1">
+                    <label className="text-xs text-muted-foreground">Kedalaman</label>
+                    <select 
+                        value={treeDepth} 
+                        onChange={(e) => setTreeDepth(Number(e.target.value))}
+                        className="text-sm bg-muted border-none rounded-lg px-3 py-2 focus:ring-1 focus:ring-primary outline-none"
+                    >
+                        <option value={2}>2 Level</option>
+                        <option value={3}>3 Level</option>
+                        <option value={4}>4 Level</option>
+                        <option value={5}>5 Level</option>
+                    </select>
+                </div>
+                <div className="flex flex-col gap-1">
+                    <label className="text-xs text-muted-foreground">Cabang</label>
+                    <select 
+                        value={treeBranching} 
+                        onChange={(e) => setTreeBranching(Number(e.target.value))}
+                        className="text-sm bg-muted border-none rounded-lg px-3 py-2 focus:ring-1 focus:ring-primary outline-none"
+                    >
+                        <option value={2}>2 anak</option>
+                        <option value={3}>3 anak</option>
+                        <option value={4}>4 anak</option>
+                    </select>
+                </div>
+            </div>
+
+            <div className="flex flex-col gap-2 mt-2">
+                <button 
+                    onClick={() => onGenerateTree(treeDepth, treeBranching)}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-all shadow-sm"
+                >
+                    <RefreshCcw size={16} />
+                    Generate Pohon Acak
+                </button>
+                <button 
+                    onClick={() => onCreateEmptyTree(treeDepth, treeBranching)}
+                    className="w-full flex items-center justify-center gap-2 py-2 border border-border rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+                >
+                    <Plus size={16} />
+                    Buat Struktur Kosong
+                </button>
+            </div>
         </div>
 
     </div>

@@ -36,7 +36,7 @@ export default function Simulator() {
 
   // Initialize
   useEffect(() => {
-    handleGenerateTree();
+    handleGenerateTree(3, 2); // Default: 3 levels, 2 branches
     
     // Start Tour on Mount
     if (!mounted.current) {
@@ -165,10 +165,35 @@ export default function Simulator() {
       setIsPlaying(false);
   }, [root, algorithm, traversalOrder]);
 
-  const handleGenerateTree = () => {
-      const newRoot = generateTree(3, 2); 
+  const handleGenerateTree = (depth: number, branching: number) => {
+      const newRoot = generateTree(depth, branching); 
       setRoot(newRoot);
       setCurrentStepIndex(-1);
+  };
+
+  // Generate empty tree structure (no values, user fills them)
+  const generateEmptyStructure = (depth: number, branching: number, isMax: boolean): TreeNode => {
+    const node: TreeNode = {
+      id: `node-${Math.random().toString(36).substr(2, 5)}`,
+      value: depth === 1 ? 0 : null, // Leaf nodes get default value 0
+      children: [],
+      isMaxNode: isMax,
+    };
+
+    if (depth > 1) {
+      for (let i = 0; i < branching; i++) {
+        node.children.push(generateEmptyStructure(depth - 1, branching, !isMax));
+      }
+    }
+
+    return node;
+  };
+
+  const handleCreateEmptyTree = (depth: number, branching: number) => {
+      const emptyRoot = generateEmptyStructure(depth, branching, true);
+      setRoot(emptyRoot);
+      setCurrentStepIndex(-1);
+      toast.success(`Struktur pohon (${depth} level, ${branching} cabang) dibuat. Edit nilai daun dengan mengklik ✏️.`);
   };
 
   // Playback Logic
@@ -396,6 +421,7 @@ export default function Simulator() {
                    algorithm={algorithm}
                    onAlgorithmChange={setAlgorithm}
                    onGenerateTree={handleGenerateTree}
+                   onCreateEmptyTree={handleCreateEmptyTree}
                    traversalOrder={traversalOrder}
                    onTraversalOrderChange={setTraversalOrder}
                 />
