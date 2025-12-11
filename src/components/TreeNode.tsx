@@ -133,16 +133,40 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({
       </g>
 
       {/* Explanation Tooltip (Moved to end for Z-index within node group) */}
-      {props.explanation && (
-         <g transform="translate(0, -65)" style={{ pointerEvents: 'none' }}>
-             <path d="M -60 -30 L 60 -30 L 60 10 L 10 10 L 0 20 L -10 10 L -60 10 Z" fill="hsl(var(--popover))" stroke="hsl(var(--primary))" strokeWidth="1" filter="drop-shadow(0 4px 6px rgb(0 0 0 / 0.3))" />
-             <foreignObject x="-55" y="-25" width="110" height="35">
-                <div className="flex items-center justify-center h-full text-[10px] text-center leading-tight p-1 text-popover-foreground font-medium">
-                    {props.explanation}
-                </div>
-             </foreignObject>
-         </g>
-      )}
+      {props.explanation && (() => {
+        const textLen = props.explanation.length;
+        const tooltipWidth = Math.min(Math.max(140, textLen * 4), 320);
+        const tooltipHeight = Math.max(45, Math.ceil(textLen / 40) * 18 + 20);
+        const halfWidth = tooltipWidth / 2;
+        
+        return (
+          <g transform={`translate(0, ${-50 - tooltipHeight})`} style={{ pointerEvents: 'none' }}>
+            <rect 
+              x={-halfWidth} 
+              y={0} 
+              width={tooltipWidth} 
+              height={tooltipHeight}
+              rx={8}
+              fill="hsl(var(--popover))" 
+              stroke="hsl(var(--primary))" 
+              strokeWidth="2"
+              filter="drop-shadow(0 4px 12px rgb(0 0 0 / 0.4))"
+            />
+            {/* Arrow pointing down */}
+            <path 
+              d={`M -8 ${tooltipHeight} L 0 ${tooltipHeight + 10} L 8 ${tooltipHeight} Z`}
+              fill="hsl(var(--popover))"
+              stroke="hsl(var(--primary))"
+              strokeWidth="2"
+            />
+            <foreignObject x={-halfWidth + 8} y={6} width={tooltipWidth - 16} height={tooltipHeight - 10}>
+              <div className="text-[11px] text-center leading-snug p-1 text-popover-foreground font-medium">
+                {props.explanation}
+              </div>
+            </foreignObject>
+          </g>
+        );
+      })()}
     </g>
   );
 };

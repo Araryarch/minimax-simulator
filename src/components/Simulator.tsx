@@ -101,7 +101,7 @@ export default function Simulator() {
                         element: '.simulation-controls', 
                         popover: { 
                             title: 'Kontrol Simulasi', 
-                            description: 'Tekan <b>Play</b> untuk jalankan otomatis, atau <b>Next/Prev</b> untuk langkah manual. Atur kecepatan sesuai keinginan.',
+                            description: 'Tekan <b>Play</b> untuk jalankan otomatis, atau <b>Next/Prev</b> untuk langkah manual.<br/><br/>⌨️ <b>Keyboard Shortcuts:</b><br/>• ← → untuk prev/next<br/>• Spasi untuk play/pause',
                             side: 'right'
                         } 
                     },
@@ -117,7 +117,7 @@ export default function Simulator() {
                         element: '.main-canvas', 
                         popover: { 
                             title: 'Pohon Permainan', 
-                            description: '<b>Klik & drag</b> untuk geser, <b>scroll</b> untuk zoom.<br/>Node MAX = kotak merah, MIN = lingkaran biru.',
+                            description: '<b>Klik & drag</b> untuk geser, <b>scroll</b> untuk zoom.<br/>Node MAX = kotak merah, MIN = lingkaran biru.<br/><br/>💡 Gunakan <b>Minimap</b> di pojok kanan atas untuk navigasi cepat!',
                             side: 'left'
                         } 
                     },
@@ -125,14 +125,14 @@ export default function Simulator() {
                         element: '.tree-node', 
                         popover: { 
                             title: 'Interaksi Node', 
-                            description: '<b>Hover ke node</b> untuk melihat tombol aksi:<br/>• (+) Tambah anak<br/>• (✏️) Edit nilai<br/>• (🗑️) Hapus',
+                            description: '<b>Hover ke node</b> untuk melihat tombol aksi:<br/>• (+) Tambah anak<br/>• (✏️) Edit nilai (hanya untuk daun)<br/>• (🗑️) Hapus',
                             side: 'bottom'
                         } 
                     },
                     { 
                         popover: { 
-                            title: 'Siap Mulai!', 
-                            description: 'Tekan <b>Play</b> dan lihat algoritma bekerja. Selamat belajar!' 
+                            title: '🎉 Siap Mulai!', 
+                            description: 'Tekan <b>Play</b> atau <b>Spasi</b> dan lihat algoritma bekerja!<br/><br/>Saat pemangkasan terjadi, akan ada notifikasi yang menjelaskan apa yang terjadi. Selamat belajar!' 
                         } 
                     },
                 ]
@@ -214,6 +214,41 @@ export default function Simulator() {
       return () => { if (playTimer.current) clearInterval(playTimer.current as number); };
   }, [isPlaying, playbackSpeed, nextStep]);
 
+  // Keyboard controls
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      switch (e.key) {
+        case 'ArrowRight':
+          e.preventDefault();
+          setIsPlaying(false);
+          setCurrentStepIndex(prev => Math.min(steps.length - 1, prev + 1));
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          setIsPlaying(false);
+          setCurrentStepIndex(prev => Math.max(-1, prev - 1));
+          break;
+        case ' ': // Space bar
+          e.preventDefault();
+          if (isPlaying) {
+            setIsPlaying(false);
+          } else {
+            if (currentStepIndex >= steps.length - 1) setCurrentStepIndex(-1);
+            setIsPlaying(true);
+          }
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [steps.length, isPlaying, currentStepIndex]);
+
   // Auto-scroll log to current step
   useEffect(() => {
     if (currentStepIndex >= 0) {
@@ -252,7 +287,7 @@ export default function Simulator() {
             </div>
           </div>,
           {
-            duration: 6000,
+            duration: 15000,
             position: 'bottom-right',
           }
         );
