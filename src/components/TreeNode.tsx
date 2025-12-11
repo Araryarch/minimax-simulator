@@ -1,6 +1,7 @@
 import React from 'react';
 import { LayoutNode } from '@/lib/utils/layout';
 import { PlusCircle, Pencil, Trash2 } from 'lucide-react';
+import { useAnimatedNumber } from '@/components/AnimatedNumber';
 
 interface TreeNodeProps {
   node: LayoutNode;
@@ -32,6 +33,11 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({
 }) => {
   const isActive = activeId === node.id;
   const isVisited = visitedIds?.includes(node.id);
+
+  // Animated values with sound
+  const { displayValue: animatedAlpha, isAnimating: alphaAnimating } = useAnimatedNumber(alpha, 200, true);
+  const { displayValue: animatedBeta, isAnimating: betaAnimating } = useAnimatedNumber(beta, 200, true);
+  const { displayValue: animatedValue, isAnimating: valueAnimating } = useAnimatedNumber(value, 200, true);
 
   const baseClass = "tree-node";
   const activeClass = isActive ? "active" : "";
@@ -101,28 +107,36 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({
           <div className="flex items-center justify-center h-full">
             <span 
               className={`node-value text-[16px] font-bold transition-all duration-200 ${
-                value !== undefined ? 'scale-110 text-primary' : ''
+                valueAnimating ? 'scale-125 text-primary' : ''
               }`}
-              style={{ color: 'hsl(var(--foreground))' }}
+              style={{ color: valueAnimating ? undefined : 'hsl(var(--foreground))' }}
             >
-              {value !== undefined ? value : ((node.value !== null) ? node.value : '?')}
+              {animatedValue !== undefined ? animatedValue : ((node.value !== null) ? node.value : '?')}
             </span>
           </div>
         </foreignObject>
       )}
       
-      {/* Alpha Beta - Animated */}
+      {/* Alpha Beta - Animated with counting */}
       {(alpha !== undefined || beta !== undefined) && !isPruned && (
-        <foreignObject x={-50} y={32} width={100} height={24}>
-          <div className="flex items-center justify-center gap-2 text-[11px] font-medium">
+        <foreignObject x={-60} y={32} width={120} height={24}>
+          <div className="flex items-center justify-center gap-2 text-[11px] font-semibold">
             {alpha !== undefined && (
-              <span className="px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 transition-all duration-200">
-                α:{alpha === Infinity ? '∞' : alpha === -Infinity ? '-∞' : alpha}
+              <span className={`px-1.5 py-0.5 rounded transition-all duration-150 ${
+                alphaAnimating 
+                  ? 'bg-red-500/40 text-red-300 scale-110' 
+                  : 'bg-red-500/20 text-red-400'
+              }`}>
+                α:{animatedAlpha === Infinity ? '∞' : animatedAlpha === -Infinity ? '-∞' : animatedAlpha}
               </span>
             )}
             {beta !== undefined && (
-              <span className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 transition-all duration-200">
-                β:{beta === Infinity ? '∞' : beta === -Infinity ? '-∞' : beta}
+              <span className={`px-1.5 py-0.5 rounded transition-all duration-150 ${
+                betaAnimating 
+                  ? 'bg-blue-500/40 text-blue-300 scale-110' 
+                  : 'bg-blue-500/20 text-blue-400'
+              }`}>
+                β:{animatedBeta === Infinity ? '∞' : animatedBeta === -Infinity ? '-∞' : animatedBeta}
               </span>
             )}
           </div>
