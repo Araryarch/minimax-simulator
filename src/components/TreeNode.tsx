@@ -95,18 +95,44 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({
         </text>
       )}
 
-      {/* Value */}
+      {/* Value - Animated */}
       {!isPruned && (
-        <text y={6} textAnchor="middle" className="node-value" fontSize="16">
-            {value !== undefined ? value : ((node.value !== null) ? node.value : '?')}
-        </text>
+        <foreignObject x={-30} y={-12} width={60} height={30}>
+          <div className="flex items-center justify-center h-full">
+            <span 
+              className={`node-value text-[16px] font-bold transition-all duration-200 ${
+                value !== undefined ? 'scale-110 text-primary' : ''
+              }`}
+              style={{ color: 'hsl(var(--foreground))' }}
+            >
+              {value !== undefined ? value : ((node.value !== null) ? node.value : '?')}
+            </span>
+          </div>
+        </foreignObject>
       )}
       
-      {/* Alpha Beta */}
+      {/* Alpha Beta - Animated */}
       {(alpha !== undefined || beta !== undefined) && !isPruned && (
-          <text y={42} textAnchor="middle" fontSize="11" fill="hsl(var(--muted-foreground))" fontWeight="500">
-              {alpha !== undefined ? `\u03B1:${alpha}` : ''} {beta !== undefined ? `\u03B2:${beta}` : ''}
-          </text>
+        <foreignObject x={-50} y={32} width={100} height={24}>
+          <div className="flex items-center justify-center gap-2 text-[11px] font-medium">
+            {alpha !== undefined && (
+              <span 
+                className="px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 transition-all duration-200 animate-pulse"
+                style={{ animationDuration: '1s' }}
+              >
+                α:{alpha === Infinity ? '∞' : alpha === -Infinity ? '-∞' : alpha}
+              </span>
+            )}
+            {beta !== undefined && (
+              <span 
+                className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 transition-all duration-200 animate-pulse"
+                style={{ animationDuration: '1s' }}
+              >
+                β:{beta === Infinity ? '∞' : beta === -Infinity ? '-∞' : beta}
+              </span>
+            )}
+          </div>
+        </foreignObject>
       )}
 
 

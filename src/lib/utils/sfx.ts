@@ -185,6 +185,54 @@ class SoundEffects {
       // Ignore audio errors silently
     }
   }
+
+  // Quick tick sound for counting/value updates
+  playTick() {
+    try {
+      const ctx = this.getContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1500, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.02);
+      
+      gain.gain.setValueAtTime(0.05, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.03);
+      
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.03);
+    } catch (e) {
+      // Ignore audio errors silently
+    }
+  }
+
+  // Value change "whoosh" sound
+  playValueChange() {
+    try {
+      const ctx = this.getContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(400, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.1);
+      
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12);
+      
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.12);
+    } catch (e) {
+      // Ignore audio errors silently
+    }
+  }
 }
 
 export const sfx = new SoundEffects();
