@@ -25,15 +25,16 @@ export default function RootLayout({
           defaultTheme="dark"
           enableSystem={false}
           themes={[
-            "light", "dark", 
-            "catppuccin-latte", "catppuccin-mocha", 
-            "cyberpunk", "nord", "dracula", 
-            "sunset", "ocean", "forest",
-            "everblush", "gruvbox-dark", "gruvbox-light",
-            "tokyo-night", "one-dark", 
-            "solarized-dark", "solarized-light",
-            "rose-pine", "kanagawa", "ayu-dark",
-            "palenight", "monokai"
+            // Light
+            "light", "catppuccin-latte", "gruvbox-light", "solarized-light",
+            "pinky", "lavender", "mint", "peach", "arctic", "honey",
+            // Dark
+            "dark", "catppuccin-mocha", "dracula", "nord", "one-dark",
+            "tokyo-night", "gruvbox-dark", "solarized-dark", "rose-pine",
+            "kanagawa", "ayu-dark", "palenight", "monokai", "everblush",
+            "pinky-dark", "midnight", "cherry",
+            // Special
+            "cyberpunk", "sunset", "ocean", "forest"
           ]}
         >
           {children}
