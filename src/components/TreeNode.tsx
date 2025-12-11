@@ -116,18 +116,12 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({
         <foreignObject x={-50} y={32} width={100} height={24}>
           <div className="flex items-center justify-center gap-2 text-[11px] font-medium">
             {alpha !== undefined && (
-              <span 
-                className="px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 transition-all duration-200 animate-pulse"
-                style={{ animationDuration: '1s' }}
-              >
+              <span className="px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 transition-all duration-200">
                 α:{alpha === Infinity ? '∞' : alpha === -Infinity ? '-∞' : alpha}
               </span>
             )}
             {beta !== undefined && (
-              <span 
-                className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 transition-all duration-200 animate-pulse"
-                style={{ animationDuration: '1s' }}
-              >
+              <span className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 transition-all duration-200">
                 β:{beta === Infinity ? '∞' : beta === -Infinity ? '-∞' : beta}
               </span>
             )}
