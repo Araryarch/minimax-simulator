@@ -1,0 +1,79 @@
+/* Tree Node & Canvas Styles */
+
+.tree-node {
+    cursor: default;
+}
+
+.tree-node text {
+    user-select: none;
+    font-family: 'Inter', sans-serif;
+}
+
+/* Base Shape Styles */
+.node-shape {
+    fill: hsl(var(--card));
+    stroke: hsl(var(--border));
+    stroke-width: 2px;
+    transition: all 0.3s ease;
+}
+
+.tree-node.active .node-shape {
+    fill: hsl(var(--accent));
+    stroke: hsl(var(--primary));
+    filter: drop-shadow(0 0 8px hsl(var(--primary) / 0.5));
+}
+
+.tree-node.visited .node-shape {
+    stroke: hsl(var(--primary));
+    stroke-width: 3px;
+}
+
+/* Node Types */
+.tree-node.max-node .node-shape {
+    stroke: #ef4444; /* Red for Max */
+    stroke-width: 3px;
+}
+
+.tree-node.min-node .node-shape {
+    stroke: #3b82f6; /* Blue for Min */
+    stroke-width: 3px;
+}
+
+.node-value {
+    fill: hsl(var(--foreground));
+    font-weight: bold;
+}
+
+/* Pruned */
+.tree-node.pruned {
+    opacity: 0.5;
+    filter: grayscale(100%);
+}
+.tree-node.pruned .node-shape {
+    stroke: hsl(var(--destructive));
+    stroke-dasharray: 4;
+}
+
+/* Edges */
+.tree-edge {
+    stroke: hsl(var(--border));
+    stroke-width: 2px;
+    transition: all 0.3s ease;
+}
+.tree-edge.visited {
+    stroke: hsl(var(--primary));
+    stroke-width: 3px;
+}
+.tree-edge.pruned {
+    stroke: hsl(var(--destructive));
+    stroke-dasharray: 5,5;
+    opacity: 0.5;
+}
+
+/* Controls */
+.node-actions {
+    transition: opacity 0.2s;
+}
+.tree-node:hover .node-actions {
+    opacity: 1;
+}
