@@ -118,7 +118,7 @@ export const TreeNodeComponent: React.FC<TreeNodeProps> = ({
                  <button onClick={handleAddClick} className="p-1 bg-primary text-primary-foreground rounded-full hover:scale-110 transition-transform shadow-sm" title="Add Child">
                     <PlusCircle size={16} />
                  </button>
-                 {(node.children.length === 0 || value !== undefined) && (
+                 {node.children.length === 0 && (
                      <button onClick={handleEditClick} className="p-1 bg-accent text-accent-foreground rounded-full hover:scale-110 transition-transform shadow-sm" title="Edit Value">
                         <Pencil size={16} />
                      </button>
