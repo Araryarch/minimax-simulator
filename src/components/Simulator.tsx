@@ -9,10 +9,65 @@ import { TreeNode, SimulationStep, StepType } from '@/types/tree';
 import { minimax } from '@/lib/algorithms/minimax';
 import { alphaBeta } from '@/lib/algorithms/alphaBeta';
 import { toast } from "sonner";
-import { Menu, X } from 'lucide-react';
+import { Menu, X, PlayCircle, GraduationCap, HelpCircle, CheckCircle2, RotateCcw, XCircle } from 'lucide-react';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { sfx } from '@/lib/utils/sfx';
 import '@/components/TreeComponents.css';
+
+// Helper to run algorithm and get correct values/prunes
+const getCorrectSolution = (root: TreeNode, algo: 'minimax' | 'alphabeta') => {
+  const correctValues: Record<string, number> = {};
+  const prunedIds: Set<string> = new Set();
+  
+  // Clone to avoid mutation during simulation run
+  const rootClone = JSON.parse(JSON.stringify(root));
+  
+  if (algo === 'alphabeta') {
+      const findPruned = (node: TreeNode, alpha: number, beta: number, isMax: boolean): number => {
+          let val = isMax ? -Infinity : Infinity;
+          if (!node.children || node.children.length === 0) return node.value ?? 0;
+
+          for (const child of node.children) {
+              const childVal = findPruned(child, alpha, beta, !isMax);
+              if (isMax) {
+                  val = Math.max(val, childVal);
+                  alpha = Math.max(alpha, val);
+              } else {
+                  val = Math.min(val, childVal);
+                  beta = Math.min(beta, val);
+              }
+              if (alpha >= beta) {
+                 // Subsequent siblings are pruned
+                 const idx = node.children.indexOf(child);
+                 for (let i = idx + 1; i < node.children.length; i++) {
+                     // Add all descendants of pruned sibling
+                     const collectIds = (n: TreeNode) => {
+                         prunedIds.add(n.id);
+                         if(n.children) n.children.forEach(collectIds);
+                     };
+                     collectIds(node.children[i]);
+                 }
+                 break;
+              }
+          }
+          correctValues[node.id] = val;
+          return val;
+      };
+      findPruned(rootClone, -Infinity, Infinity, true);
+  } else {
+      // For minimax, just recurse
+      const fillMinimax = (node: TreeNode, isMax: boolean): number => {
+          if (!node.children || !node.children.length) return node.value ?? 0;
+          const vals = node.children.map(c => fillMinimax(c, !isMax));
+          const v = isMax ? Math.max(...vals) : Math.min(...vals);
+          correctValues[node.id] = v;
+          return v;
+      }
+      fillMinimax(rootClone, true);
+  }
+
+  return { correctValues, prunedIds };
+};
 
 export default function Simulator() {
   const [root, setRoot] = useState<TreeNode | null>(null);
@@ -24,6 +79,14 @@ export default function Simulator() {
   const [traversalOrder, setTraversalOrder] = useState<'ltr' | 'rtl'>('ltr');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
+  // Mode State
+  const [mode, setMode] = useState<'simulate' | 'learn'>('simulate');
+  
+  // Learn Mode State
+  const [userAnswers, setUserAnswers] = useState<Record<string, number>>({});
+  const [userPruned, setUserPruned] = useState<Set<string>>(new Set());
+  const [learnFeedback, setLearnFeedback] = useState<{correct: number, wrong: number, missedPrune: number} | null>(null);
+  
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
@@ -31,6 +94,111 @@ export default function Simulator() {
 
   const playTimer = useRef<NodeJS.Timeout | number | null>(null);
   const logItemRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+
+  // --- Logic Functions ---
+
+  const findNodeById = (node: TreeNode, id: string): TreeNode | undefined => {
+      if (node.id === id) return node;
+      for (const child of node.children) {
+          const res = findNodeById(child, id);
+          if (res) return res;
+      }
+  };
+
+  const validateAnswers = () => {
+    if (!root) return;
+    
+    const { correctValues, prunedIds } = getCorrectSolution(root, algorithm);
+    
+    let correct = 0;
+    let wrong = 0;
+    let missedPrune = 0;
+    
+    Object.keys(correctValues).forEach(id => {
+        if (prunedIds.has(id)) return;
+
+        const node = findNodeById(root, id);
+        if (node && node.children.length > 0) {
+            if (userAnswers[id] === correctValues[id]) {
+                correct++;
+            } else {
+                wrong++;
+            }
+        }
+    });
+
+    if (algorithm === 'alphabeta') {
+        prunedIds.forEach(id => {
+            if (userPruned.has(id)) {
+                correct++;
+            } else {
+                missedPrune++;
+            }
+        });
+        
+        userPruned.forEach(id => {
+            if (!prunedIds.has(id)) wrong++; 
+        });
+    }
+
+    setLearnFeedback({ correct, wrong, missedPrune });
+    
+    if (wrong === 0 && missedPrune === 0) {
+        sfx.playSuccess();
+        toast.success("Selamat! Semua jawaban benar! 🎉");
+    } else {
+        sfx.playError();
+        toast.error(`Masih ada yang salah. Benar: ${correct}, Salah: ${wrong}, Lupa Pangkas: ${missedPrune}`);
+    }
+  };
+
+  const resetLearnMode = () => {
+      setUserAnswers({});
+      setUserPruned(new Set());
+      setLearnFeedback(null);
+      sfx.playClick();
+  };
+
+  const toggleMode = (newMode: 'simulate' | 'learn') => {
+      setMode(newMode);
+      setIsPlaying(false);
+      setCurrentStepIndex(-1);
+      resetLearnMode();
+      sfx.playClick();
+      
+      if (newMode === 'learn') {
+          toast.info("Mode Belajar: Klik node untuk isi nilai, Klik Kanan untuk pangkas.", { duration: 4000 });
+      }
+  };
+
+  const handleLearnNodeClick = (id: string) => {
+      const node = root ? findNodeById(root, id) : null;
+      if (node) {
+          setEditingNodeId(id);
+          const existing = userAnswers[id];
+          setEditingNodeValue(existing !== undefined ? existing : (node.value !== null ? node.value : null));
+          setIsModalOpen(true);
+      }
+  };
+
+  const handleLearnContextMenu = (id: string) => {
+      // Allow marking prune on ANY node in learn mode (user logic)
+      // Actually strictly internal nodes? No, prune usually happens at branch.
+      // Let user just mark whatever they think is pruned.
+      
+      setUserPruned(prev => {
+          const next = new Set(prev);
+          if (next.has(id)) {
+              next.delete(id);
+          } else {
+              next.add(id);
+              sfx.playPrune();
+          }
+          return next;
+      });
+  };
+
+  // --- End Logic Functions ---
 
   // Tour State
   const mounted = useRef(false);
@@ -52,6 +220,7 @@ export default function Simulator() {
                 animate: true,
                 allowClose: true,
                 overlayColor: 'rgba(0, 0, 0, 0.75)',
+                popoverClass: 'driver-popover driverjs-theme', // Use our custom theme logic
                 steps: isMobile ? [
                     // Mobile Tour - Simpler
                     { 
@@ -433,17 +602,29 @@ export default function Simulator() {
   const handleEditConfirm = (newVal: number) => {
       if (!root || !editingNodeId) return;
       
-      const clone = JSON.parse(JSON.stringify(root));
-      const updateNode = (n: TreeNode) => {
-          if (n.id === editingNodeId) {
-              n.value = newVal;
-          } else {
-              n.children.forEach(updateNode);
-          }
-      };
-      updateNode(clone);
-      setRoot(clone);
+      if (mode === 'learn') {
+          // Learn Mode: Update User Answer
+          setUserAnswers(prev => ({
+              ...prev,
+              [editingNodeId]: newVal
+          }));
+          sfx.playPop();
+      } else {
+          // Simulate Mode: Update Tree Structure
+          const clone = JSON.parse(JSON.stringify(root));
+          const updateNode = (n: TreeNode) => {
+              if (n.id === editingNodeId) {
+                  n.value = newVal;
+              } else {
+                  n.children.forEach(updateNode);
+              }
+          };
+          updateNode(clone);
+          setRoot(clone);
+      }
+      setIsModalOpen(false);
   };
+
 
   return (
     <div className="flex w-full h-screen bg-background text-foreground overflow-hidden relative">
@@ -488,53 +669,155 @@ export default function Simulator() {
           </div>
           
           <div className="p-4 flex-1 overflow-y-auto simulation-sidebar">
-              <div className="simulation-controls">
-                <Controls 
-                   currentStep={currentStepIndex}
-                   totalSteps={steps.length}
-                   isPlaying={isPlaying}
-                   onPlay={() => { 
-                       if (currentStepIndex >= steps.length - 1) setCurrentStepIndex(-1);
-                       setIsPlaying(true); 
-                   }}
-                   onPause={() => setIsPlaying(false)}
-                   onNext={nextStep}
-                   onPrev={() => setCurrentStepIndex(p => Math.max(-1, p - 1))}
-                   onReset={() => { setIsPlaying(false); setCurrentStepIndex(-1); }}
-                   playbackSpeed={playbackSpeed}
-                   onSpeedChange={setPlaybackSpeed}
-                   algorithm={algorithm}
-                   onAlgorithmChange={setAlgorithm}
-                   onGenerateTree={handleGenerateTree}
-                   onCreateEmptyTree={handleCreateEmptyTree}
-                   traversalOrder={traversalOrder}
-                   onTraversalOrderChange={setTraversalOrder}
-                />
+              {/* Mode Switcher */}
+              <div className="flex p-1 bg-muted/50 rounded-lg mb-4">
+                  <button
+                    onClick={() => toggleMode('simulate')}
+                    className={`flex-1 flex items-center justify-center gap-2 p-2 rounded text-xs font-medium transition-all ${
+                        mode === 'simulate' ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <PlayCircle size={14} />
+                    Simulasi
+                  </button>
+                  <button
+                    onClick={() => toggleMode('learn')}
+                    className={`flex-1 flex items-center justify-center gap-2 p-2 rounded text-xs font-medium transition-all ${
+                        mode === 'learn' ? 'bg-card text-accent-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <GraduationCap size={14} />
+                    Belajar
+                  </button>
               </div>
-              
-              <div className="mt-6 flex flex-col gap-2 simulation-log">
-                  <h3 className="text-sm font-semibold px-1">Log Simulasi</h3>
-                  <div className="bg-muted/50 rounded-lg p-2 h-64 border border-border overflow-y-auto">
-                      {steps.length === 0 && <span className="text-muted-foreground p-2 block text-xs">Belum ada simulasi.</span>}
-                      {steps.map((s, i) => (
-                          <div 
-                            key={s.id}
-                            ref={(el) => {
-                              if (el) logItemRefs.current.set(i, el);
-                              else logItemRefs.current.delete(i);
-                            }}
-                            className={`p-2 rounded mb-1 cursor-pointer transition-colors text-xs font-mono border-l-2 ${i === currentStepIndex ? 'bg-primary/20 border-primary text-foreground shadow-sm' : 'border-transparent hover:bg-muted/80'}`}
-                            onClick={() => {
-                                setIsPlaying(false);
-                                setCurrentStepIndex(i);
-                            }}
-                          >
-                              <span className="font-bold opacity-70 mr-2">{i+1}.</span>
-                              <span>{s.description}</span>
+
+              {mode === 'simulate' ? (
+                  <>
+                      <div className="simulation-controls">
+                        <Controls 
+                        currentStep={currentStepIndex}
+                        totalSteps={steps.length}
+                        isPlaying={isPlaying}
+                        onPlay={() => { 
+                            if (currentStepIndex >= steps.length - 1) setCurrentStepIndex(-1);
+                            setIsPlaying(true); 
+                        }}
+                        onPause={() => setIsPlaying(false)}
+                        onNext={nextStep}
+                        onPrev={() => setCurrentStepIndex(p => Math.max(-1, p - 1))}
+                        onReset={() => { setIsPlaying(false); setCurrentStepIndex(-1); }}
+                        playbackSpeed={playbackSpeed}
+                        onSpeedChange={setPlaybackSpeed}
+                        algorithm={algorithm}
+                        onAlgorithmChange={setAlgorithm}
+                        onGenerateTree={handleGenerateTree}
+                        onCreateEmptyTree={handleCreateEmptyTree}
+                        traversalOrder={traversalOrder}
+                        onTraversalOrderChange={setTraversalOrder}
+                        />
+                      </div>
+                      
+                      <div className="mt-6 flex flex-col gap-2 simulation-log">
+                        <h3 className="text-sm font-semibold px-1">Log Simulasi</h3>
+                        <div className="bg-muted/50 rounded-lg p-2 h-64 border border-border overflow-y-auto">
+                            {steps.length === 0 && <span className="text-muted-foreground p-2 block text-xs">Belum ada simulasi.</span>}
+                            {steps.map((s, i) => (
+                                <div 
+                                    key={s.id}
+                                    ref={(el) => {
+                                    if (el) logItemRefs.current.set(i, el);
+                                    else logItemRefs.current.delete(i);
+                                    }}
+                                    className={`p-2 rounded mb-1 cursor-pointer transition-colors text-xs font-mono border-l-2 ${i === currentStepIndex ? 'bg-primary/20 border-primary text-foreground shadow-sm' : 'border-transparent hover:bg-muted/80'}`}
+                                    onClick={() => {
+                                        setIsPlaying(false);
+                                        setCurrentStepIndex(i);
+                                    }}
+                                >
+                                    <span className="font-bold opacity-70 mr-2">{i+1}.</span>
+                                    <span>{s.description}</span>
+                                </div>
+                            ))}
+                        </div>
+                      </div>
+                  </>
+              ) : (
+                  <div className="flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
+                      <div className="bg-muted/30 p-4 rounded-lg border border-border">
+                          <h3 className="font-semibold mb-2 flex items-center gap-2">
+                              <HelpCircle size={16} />
+                              Mode Belajar
+                          </h3>
+                          <p className="text-xs text-muted-foreground leading-relaxed mb-4">
+                              Kerjakan pohon ini sendiri! Klik node untuk mengisi nilai, dan klik kanan untuk memangkas (alpha-beta).
+                          </p>
+                          
+                          <div className="grid grid-cols-2 gap-2 mb-4">
+                              <div className="bg-card p-2 rounded text-center border border-border">
+                                  <div className="text-xs text-muted-foreground">Terisi</div>
+                                  <div className="font-bold text-lg">{Object.keys(userAnswers).length}</div>
+                              </div>
+                              <div className="bg-card p-2 rounded text-center border border-border">
+                                  <div className="text-xs text-muted-foreground">Dipangkas</div>
+                                  <div className="font-bold text-lg">{userPruned.size}</div>
+                              </div>
                           </div>
-                      ))}
+
+                          <div className="flex flex-col gap-2">
+                              <button 
+                                onClick={validateAnswers}
+                                className="w-full py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                              >
+                                <CheckCircle2 size={16} />
+                                Cek Jawaban
+                              </button>
+                              <button 
+                                onClick={resetLearnMode}
+                                className="w-full py-2 bg-muted hover:bg-muted/80 text-foreground rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                              >
+                                <RotateCcw size={16} />
+                                Reset
+                              </button>
+                              
+                              <div className="h-px bg-border my-2" />
+                              
+                              <div className="flex flex-col gap-2">
+                                  <button onClick={() => handleGenerateTree(3, 2)} className="text-xs text-start px-2 py-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground">
+                                      Generate Soal Baru (Acak)
+                                  </button>
+                                  <button onClick={() => handleCreateEmptyTree(3, 2)} className="text-xs text-start px-2 py-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground">
+                                      Buat Soal Kosong
+                                  </button>
+                              </div>
+                          </div>
+                      </div>
+
+                      {learnFeedback && (
+                          <div className={`p-4 rounded-lg border ${learnFeedback.wrong === 0 && learnFeedback.missedPrune === 0 ? 'bg-green-500/10 border-green-500/50' : 'bg-red-500/10 border-red-500/50'}`}>
+                              <h4 className="font-bold mb-2 flex items-center gap-2">
+                                  {learnFeedback.wrong === 0 && learnFeedback.missedPrune === 0 ? <CheckCircle2 className="text-green-500" /> : <XCircle className="text-red-500" />}
+                                  Hasil
+                              </h4>
+                              <div className="space-y-1 text-sm">
+                                  <div className="flex justify-between">
+                                      <span>Benar:</span>
+                                      <span className="font-mono font-bold text-green-500">{learnFeedback.correct}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                      <span>Salah:</span>
+                                      <span className="font-mono font-bold text-red-500">{learnFeedback.wrong}</span>
+                                  </div>
+                                  {algorithm === 'alphabeta' && (
+                                     <div className="flex justify-between">
+                                          <span>Lupa Pangkas:</span>
+                                          <span className="font-mono font-bold text-orange-500">{learnFeedback.missedPrune}</span>
+                                      </div> 
+                                  )}
+                              </div>
+                          </div>
+                      )}
                   </div>
-              </div>
+              )}
           </div>
       </aside>
       
@@ -543,10 +826,18 @@ export default function Simulator() {
          {root ? (
              <TreeCanvas 
                 root={root} 
-                simulationState={currentSimulationState}
-                onAddChild={addChild}
-                onEditNode={openEditModal}
+                simulationState={mode === 'simulate' ? currentSimulationState : {
+                    activeId: undefined, // No active step logic in learn mode yet
+                    visitedIds: [], // Maybe track clicks?
+                    currentValues: userAnswers,
+                    alphaValues: {}, // User doesn't input alpha/beta yet
+                    betaValues: {},
+                    prunedIds: Array.from(userPruned)
+                }}
+                onAddChild={mode === 'simulate' ? addChild : handleLearnContextMenu} // Hijack: Right click adds child in sim, toggles prune in learn
+                onEditNode={mode === 'simulate' ? openEditModal : handleLearnNodeClick} // Edit behavior changes
                 onDeleteNode={handleDeleteNode}
+                isLearnMode={mode === 'learn'}
              />
          ) : (
              <div className="flex items-center justify-center h-full text-muted-foreground">

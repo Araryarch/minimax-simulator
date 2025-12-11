@@ -18,6 +18,7 @@ interface TreeCanvasProps {
   onAddChild: (parentId: string) => void;
   onEditNode: (nodeId: string) => void;
   onDeleteNode: (nodeId: string) => void;
+  isLearnMode?: boolean;
 }
 
 export const TreeCanvas: React.FC<TreeCanvasProps> = ({
